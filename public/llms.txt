@@ -1,0 +1,32 @@
+# Corsica Soundscape
+
+> Carte sonore collaborative de la Corse. Les utilisateurs enregistrent
+> des sons géolocalisés (mer, maquis, villages, marchés) et les partagent
+> sur une carte interactive de l'île de Beauté.
+
+## Fonctionnalités
+
+- Enregistrement audio géolocalisé via le microphone
+- Carte interactive Leaflet centrée sur la Corse
+- 7 catégories : mer, nature, village, animal, musique, marché, autre
+- Écoute en streaming des sons de chaque lieu
+- Fonctionne hors connexion (PWA installable)
+- Synchronisation automatique au retour du réseau
+
+## Stack technique
+
+- Frontend : React + Vite
+- Backend : Express.js (API REST)
+- Carte : Leaflet / react-leaflet
+- Stockage local : IndexedDB (idb)
+- Service Worker : stratégies Cache First + Network First
+- Synchronisation : Background Sync + fallback online event
+
+## API
+
+- GET /api/sounds — Liste des sons
+- POST /api/sounds — Ajouter un son (multipart audio + métadonnées)
+
+## Contact
+
+Projet universitaire — M2 Informatique, Università di Corsica

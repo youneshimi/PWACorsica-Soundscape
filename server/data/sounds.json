@@ -1,0 +1,14 @@
+[
+  {
+    "id": "fe2499db-f9ba-4dab-accb-ca1a2c5ca3ff",
+    "title": "Nature Corte",
+    "description": "test",
+    "latitude": 42.298585,
+    "longitude": 9.1528264,
+    "category": "nature",
+    "audioUrl": "/uploads/13e07ccb-155b-45af-a533-258fbf2db721.webm",
+    "createdAt": "2026-10-09T13:02:22.865Z",
+    "version": 1,
+    "synced": true
+  }
+]

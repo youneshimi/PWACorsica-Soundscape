@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hors connexion — Corsica Soundscape</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      text-align: center;
+    }
+    .icon { font-size: 4rem; margin-bottom: 1.5rem; }
+    h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+    p { color: #94a3b8; max-width: 400px; line-height: 1.6; margin-bottom: 1.5rem; }
+    button {
+      background: #1a73e8;
+      color: white;
+      border: none;
+      padding: 0.75rem 2rem;
+      border-radius: 0.5rem;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover { background: #1557b0; }
+    .wave {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      height: 120px;
+      background: rgba(26, 115, 232, 0.1);
+      border-radius: 50% 50% 0 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="icon">🎧</div>
+  <h1>Vous êtes hors connexion</h1>
+  <p>
+    Corsica Soundscape a besoin d'une connexion pour charger cette page.
+    Vos sons enregistrés seront synchronisés au retour du réseau.
+  </p>
+  <button onclick="location.reload()">Réessayer</button>
+  <div class="wave"></div>
+</body>
+</html>

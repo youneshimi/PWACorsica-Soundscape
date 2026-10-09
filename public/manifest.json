@@ -1,0 +1,39 @@
+{
+  "name": "Corsica Soundscape — Carte sonore de la Corse",
+  "short_name": "Soundscape",
+  "description": "Explorez et partagez les sons de la Corse : mer, vent, clochers, marchés. Une carte sonore collaborative.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#1a73e8",
+  "background_color": "#0f172a",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "/img/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/img/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/img/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["lifestyle", "travel", "social"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Enregistrer un son",
+      "short_name": "Enregistrer",
+      "url": "/?action=record",
+      "icons": [{ "src": "/img/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

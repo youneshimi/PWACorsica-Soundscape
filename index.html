@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- PWA Meta -->
+    <title>Corsica Soundscape — Carte sonore collaborative de la Corse</title>
+    <meta name="description" content="Explorez et partagez les sons de la Corse : vagues, vent du maquis, clochers, marchés. Enregistrez, géolocalisez et écoutez les ambiances de l'île de Beauté." />
+    <meta name="theme-color" content="#1a73e8" />
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Corsica Soundscape — Carte sonore de la Corse" />
+    <meta property="og:description" content="Explorez et partagez les sons de la Corse. Une carte sonore collaborative et installable." />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="fr_FR" />
+
+    <!-- SEO -->
+    <meta name="robots" content="index, follow" />
+
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Corsica Soundscape",
+      "description": "Carte sonore collaborative de la Corse. Explorez et partagez les sons de l'île de Beauté.",
+      "applicationCategory": "MultimediaApplication",
+      "operatingSystem": "Web",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "EUR"
+      },
+      "author": {
+        "@type": "Organization",
+        "name": "Università di Corsica — M2 Informatique"
+      },
+      "contentLocation": {
+        "@type": "Place",
+        "name": "Corse, France",
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": 42.15,
+          "longitude": 9.1
+        }
+      }
+    }
+    </script>
+  </head>
+  <body>
+    <!-- Contenu public visible par les crawlers (SEO / GEO) -->
+    <noscript>
+      <h1>Corsica Soundscape</h1>
+      <p>Carte sonore collaborative de la Corse. Explorez les ambiances de l'île : mer, maquis, villages, marchés.
+         Enregistrez vos propres sons et partagez-les avec la communauté.</p>
+      <h2>Sons populaires</h2>
+      <ul>
+        <li>Vagues à Palombaggia — Porto-Vecchio</li>
+        <li>Cloches de la cathédrale — Ajaccio</li>
+        <li>Vent dans le maquis — Bavella</li>
+        <li>Marché matinal — Bastia</li>
+      </ul>
+      <p>Activez JavaScript pour profiter de la carte interactive et enregistrer vos sons.</p>
+    </noscript>
+
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

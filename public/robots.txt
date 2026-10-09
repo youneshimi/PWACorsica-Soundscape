@@ -1,0 +1,21 @@
+# Corsica Soundscape — robots.txt
+# Politique : tout est indexable sauf les assets techniques.
+# Les sons et la carte sont du contenu public à rendre visible.
+
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /uploads/
+
+# Crawlers IA — accès au contenu public
+User-agent: GPTBot
+Allow: /
+Disallow: /api/
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+Sitemap: https://corsica-soundscape.vercel.app/sitemap.xml
