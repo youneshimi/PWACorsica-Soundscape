@@ -1,4 +1,8 @@
 .install-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   position: fixed;
   bottom: calc(24px + env(safe-area-inset-bottom));
   left: 16px;

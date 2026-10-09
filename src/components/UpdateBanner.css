@@ -26,10 +26,6 @@
   min-width: 0;
 }
 
-.update-content span:first-child {
-  font-size: 1.3rem;
-}
-
 .update-content p {
   font-size: 0.85rem;
   line-height: 1.4;

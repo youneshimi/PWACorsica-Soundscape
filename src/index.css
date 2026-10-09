@@ -1,19 +1,19 @@
 :root {
-  --color-bg: #191e1b;
-  --color-surface: #252c27;
-  --color-surface-hover: #343e37;
-  --color-primary: #326c54;
-  --color-primary-hover: #285744;
-  --color-accent: #326c54;
-  --color-accent-hover: #285744;
-  --color-gold: #f59e0b;
-  --color-text: #f2f3ef;
-  --color-text-muted: #b0bab2;
-  --color-danger: #ef4444;
-  --color-success: #22c55e;
-  --color-warning: #f59e0b;
+  --color-bg: #f6f3ed;
+  --color-surface: #fffdf8;
+  --color-surface-hover: #e5e0d6;
+  --color-primary: #3f604e;
+  --color-primary-hover: #314b3d;
+  --color-accent: #3f604e;
+  --color-accent-hover: #314b3d;
+  --color-gold: #8c5b1f;
+  --color-text: #30352f;
+  --color-text-muted: #686b61;
+  --color-danger: #a34032;
+  --color-success: #40644d;
+  --color-warning: #8c5b1f;
   --radius: 6px;
-  --shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  --shadow: 0 2px 6px rgba(48, 53, 47, 0.12);
 }
 
 * {
@@ -36,6 +36,11 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+.lucide {
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
 /* Carte */
 .leaflet-container {
   background: var(--color-bg) !important;
@@ -54,6 +59,52 @@ body {
 
 .leaflet-popup-close-button {
   color: var(--color-text-muted) !important;
+}
+
+.map-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 2px solid var(--color-primary);
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-primary);
+  box-shadow: var(--shadow);
+}
+
+.map-marker.selected {
+  background: var(--color-primary);
+  color: white;
+}
+
+.map-popup {
+  min-width: 180px;
+}
+
+.map-popup-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+}
+
+.map-popup .map-popup-description {
+  margin: 0.5rem 0;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.map-popup .map-popup-meta {
+  margin: 0.5rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+}
+
+.map-popup .sync-pending {
+  display: inline-block;
+  margin-left: 0.5rem;
 }
 
 /* Boutons et champs */
@@ -110,8 +161,8 @@ button:disabled {
 }
 
 @keyframes recording-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-  50% { box-shadow: 0 0 0 12px rgba(239, 68, 68, 0); }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.65; }
 }
 
 .fade-in {
