@@ -8,6 +8,15 @@
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { useEffect } from 'react';
+import { Clock } from 'lucide-react';
+import CategoryIcon from './CategoryIcon';
+import merIcon from '../assets/icons/mer.svg?raw';
+import natureIcon from '../assets/icons/nature.svg?raw';
+import villageIcon from '../assets/icons/village.svg?raw';
+import animalIcon from '../assets/icons/animal.svg?raw';
+import musiqueIcon from '../assets/icons/musique.svg?raw';
+import marcheIcon from '../assets/icons/marche.svg?raw';
+import autreIcon from '../assets/icons/autre.svg?raw';
 
 // Fixer l'icône Leaflet par défaut (problème connu avec bundlers)
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -26,31 +35,20 @@ const CORSICA_CENTER = [42.3, 9.15];
 const CORSICA_ZOOM = 9;
 
 // Icônes par catégorie
-const categoryEmoji = {
-  mer: '🌊',
-  nature: '🌿',
-  village: '🏘️',
-  animal: '🐦',
-  musique: '🎵',
-  marche: '🛒',
-  autre: '📍',
+const categoryIcons = {
+  mer: merIcon,
+  nature: natureIcon,
+  village: villageIcon,
+  animal: animalIcon,
+  musique: musiqueIcon,
+  marche: marcheIcon,
+  autre: autreIcon,
 };
 
-function createCategoryIcon(category) {
-  const emoji = categoryEmoji[category] || '📍';
+function createCategoryIcon(category, selected) {
+  const svg = categoryIcons[category] || autreIcon;
   return L.divIcon({
-    html: `<div style="
-      font-size: 1.5rem;
-      width: 36px;
-      height: 36px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #1e293b;
-      border: 2px solid #1a73e8;
-      border-radius: 50%;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-    ">${emoji}</div>`,
+    html: `<div class="map-marker${selected ? ' selected' : ''}">${svg}</div>`,
     iconSize: [36, 36],
     iconAnchor: [18, 18],
     popupAnchor: [0, -20],
@@ -88,25 +86,25 @@ export default function SoundMap({ sounds, selectedSound, onSelectSound, flyTo }
         <Marker
           key={sound.id}
           position={[sound.latitude, sound.longitude]}
-          icon={createCategoryIcon(sound.category)}
+          icon={createCategoryIcon(sound.category, selectedSound?.id === sound.id)}
           eventHandlers={{
             click: () => onSelectSound(sound),
           }}
         >
           <Popup>
-            <div style={{ minWidth: 180 }}>
-              <strong style={{ fontSize: '1rem' }}>
-                {categoryEmoji[sound.category] || '📍'} {sound.title}
+            <div className="map-popup">
+              <strong className="map-popup-title">
+                <CategoryIcon category={sound.category} size={18} /> {sound.title}
               </strong>
               {sound.description && (
-                <p style={{ margin: '0.5rem 0', color: '#94a3b8', fontSize: '0.85rem' }}>
+                <p className="map-popup-description">
                   {sound.description}
                 </p>
               )}
-              <p style={{ fontSize: '0.75rem', color: '#64748b' }}>
+              <p className="map-popup-meta">
                 {new Date(sound.createdAt).toLocaleDateString('fr-FR')}
                 {!sound.synced && sound.id?.startsWith('local-') && (
-                  <span style={{ color: '#f59e0b', marginLeft: '0.5rem' }}>⏳ En attente de sync</span>
+                  <span className="sync-pending"><Clock size={12} aria-hidden="true" /> En attente de sync</span>
                 )}
               </p>
             </div>

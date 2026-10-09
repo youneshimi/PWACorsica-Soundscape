@@ -6,6 +6,7 @@
 // ============================================================
 
 import { useState, useEffect, useCallback } from 'react';
+import { Mic } from 'lucide-react';
 import SoundMap from './components/SoundMap';
 import SoundPanel from './components/SoundPanel';
 import RecordModal from './components/RecordModal';
@@ -92,7 +93,7 @@ function App() {
         aria-label="Enregistrer un son"
         title="Enregistrer un son"
       >
-        🎤
+        <Mic size={22} strokeWidth={1.75} aria-hidden="true" />
       </button>
 
       {/* Modal d'enregistrement */}

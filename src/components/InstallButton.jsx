@@ -6,6 +6,7 @@
 // ============================================================
 
 import { useState, useEffect } from 'react';
+import { Download } from 'lucide-react';
 import './InstallButton.css';
 
 export default function InstallButton() {
@@ -50,7 +51,7 @@ export default function InstallButton() {
 
   return (
     <button className="install-btn" onClick={handleInstall}>
-      📲 Installer l'app
+      <Download size={18} aria-hidden="true" /> Installer l'app
     </button>
   );
 }

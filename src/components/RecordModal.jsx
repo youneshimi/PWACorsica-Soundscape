@@ -8,16 +8,17 @@
 // ============================================================
 
 import { useState, useRef, useCallback } from 'react';
+import { LocateFixed, MapPin, Mic, RotateCcw, Save, X } from 'lucide-react';
 import './RecordModal.css';
 
 const categories = [
-  { value: 'mer', label: '🌊 Mer / Plage' },
-  { value: 'nature', label: '🌿 Nature / Maquis' },
-  { value: 'village', label: '🏘️ Village / Cloches' },
-  { value: 'animal', label: '🐦 Animal' },
-  { value: 'musique', label: '🎵 Musique' },
-  { value: 'marche', label: '🛒 Marché' },
-  { value: 'autre', label: '📍 Autre' },
+  { value: 'mer', label: 'Mer / Plage' },
+  { value: 'nature', label: 'Nature / Maquis' },
+  { value: 'village', label: 'Village / Cloches' },
+  { value: 'animal', label: 'Animal' },
+  { value: 'musique', label: 'Musique' },
+  { value: 'marche', label: 'Marché' },
+  { value: 'autre', label: 'Autre' },
 ];
 
 export default function RecordModal({ isOpen, onClose, onSave }) {
@@ -193,8 +194,10 @@ export default function RecordModal({ isOpen, onClose, onSave }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>🎤 Enregistrer un son</h2>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <h2>Enregistrer un son</h2>
+          <button className="modal-close" onClick={onClose} aria-label="Fermer">
+            <X size={18} aria-hidden="true" />
+          </button>
         </div>
 
         <div className="modal-body">
@@ -208,10 +211,10 @@ export default function RecordModal({ isOpen, onClose, onSave }) {
                 {recording ? (
                   <>
                     <span className="record-dot" />
-                    {formatDuration(duration)} — Tap pour arrêter
+                    {formatDuration(duration)} — Appuyez pour arrêter
                   </>
                 ) : (
-                  '🎙️ Appuyez pour enregistrer'
+                  <><Mic size={20} aria-hidden="true" /> Appuyez pour enregistrer</>
                 )}
               </button>
             ) : (
@@ -221,7 +224,7 @@ export default function RecordModal({ isOpen, onClose, onSave }) {
                   className="re-record-btn"
                   onClick={() => { setAudioBlob(null); setAudioUrl(null); }}
                 >
-                  🔄 Réenregistrer
+                  <RotateCcw size={16} aria-hidden="true" /> Réenregistrer
                 </button>
               </div>
             )}
@@ -272,10 +275,10 @@ export default function RecordModal({ isOpen, onClose, onSave }) {
             <label>Position</label>
             {position ? (
               <p className="geo-info">
-                📍 {position.latitude.toFixed(4)}, {position.longitude.toFixed(4)}
+                <MapPin size={16} aria-hidden="true" /> {position.latitude.toFixed(4)}, {position.longitude.toFixed(4)}
               </p>
             ) : geoLoading ? (
-              <p className="geo-loading">📡 Localisation en cours…</p>
+              <p className="geo-loading"><LocateFixed size={16} aria-hidden="true" /> Localisation en cours…</p>
             ) : geoError ? (
               <div>
                 <p className="error-msg">{geoError}</p>
@@ -285,7 +288,7 @@ export default function RecordModal({ isOpen, onClose, onSave }) {
               </div>
             ) : (
               <button className="geo-btn" onClick={requestLocation}>
-                📍 Obtenir ma position
+                <MapPin size={16} aria-hidden="true" /> Obtenir ma position
               </button>
             )}
           </div>
@@ -300,7 +303,7 @@ export default function RecordModal({ isOpen, onClose, onSave }) {
             onClick={handleSave}
             disabled={!title.trim() || !audioBlob}
           >
-            💾 Sauvegarder
+            <Save size={16} aria-hidden="true" /> Sauvegarder
           </button>
         </div>
       </div>

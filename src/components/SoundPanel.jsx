@@ -3,27 +3,19 @@
 // ============================================================
 
 import { useState, useRef } from 'react';
+import { Clock, Headphones, Pause, Play, X } from 'lucide-react';
+import CategoryIcon from './CategoryIcon';
 import './SoundPanel.css';
-
-const categoryEmoji = {
-  mer: '🌊',
-  nature: '🌿',
-  village: '🏘️',
-  animal: '🐦',
-  musique: '🎵',
-  marche: '🛒',
-  autre: '📍',
-};
 
 const categories = [
   { value: 'all', label: 'Tous' },
-  { value: 'mer', label: '🌊 Mer' },
-  { value: 'nature', label: '🌿 Nature' },
-  { value: 'village', label: '🏘️ Village' },
-  { value: 'animal', label: '🐦 Animal' },
-  { value: 'musique', label: '🎵 Musique' },
-  { value: 'marche', label: '🛒 Marché' },
-  { value: 'autre', label: '📍 Autre' },
+  { value: 'mer', label: 'Mer' },
+  { value: 'nature', label: 'Nature' },
+  { value: 'village', label: 'Village' },
+  { value: 'animal', label: 'Animal' },
+  { value: 'musique', label: 'Musique' },
+  { value: 'marche', label: 'Marché' },
+  { value: 'autre', label: 'Autre' },
 ];
 
 export default function SoundPanel({ sounds, selectedSound, onSelectSound, outboxCount }) {
@@ -65,18 +57,18 @@ export default function SoundPanel({ sounds, selectedSound, onSelectSound, outbo
         onClick={() => setIsOpen(!isOpen)}
         aria-label={isOpen ? 'Fermer la liste' : 'Ouvrir la liste'}
       >
-        {isOpen ? '✕' : '🎧'}
+        {isOpen ? <X size={20} aria-hidden="true" /> : <Headphones size={20} aria-hidden="true" />}
         {outboxCount > 0 && <span className="badge">{outboxCount}</span>}
       </button>
 
       <aside className={`sound-panel ${isOpen ? 'open' : ''}`}>
         <div className="panel-header">
-          <h2>🎧 Sons de la Corse</h2>
+          <h2>Sons de la Corse</h2>
           <p className="sound-count">
             {filtered.length} son{filtered.length > 1 ? 's' : ''}
             {outboxCount > 0 && (
               <span className="outbox-badge">
-                ⏳ {outboxCount} en attente
+                <Clock size={12} aria-hidden="true" /> {outboxCount} en attente
               </span>
             )}
           </p>
@@ -89,7 +81,9 @@ export default function SoundPanel({ sounds, selectedSound, onSelectSound, outbo
               key={cat.value}
               className={`filter-chip ${filter === cat.value ? 'active' : ''}`}
               onClick={() => setFilter(cat.value)}
+              aria-pressed={filter === cat.value}
             >
+              {cat.value !== 'all' && <CategoryIcon category={cat.value} size={16} />}
               {cat.label}
             </button>
           ))}
@@ -100,7 +94,7 @@ export default function SoundPanel({ sounds, selectedSound, onSelectSound, outbo
           {filtered.length === 0 ? (
             <div className="empty-state">
               <p>Aucun son dans cette catégorie.</p>
-              <p className="hint">Enregistrez le premier ! 🎤</p>
+              <p className="hint">Enregistrez un son pour le partager ici.</p>
             </div>
           ) : (
             filtered.map((sound) => (
@@ -110,8 +104,8 @@ export default function SoundPanel({ sounds, selectedSound, onSelectSound, outbo
                 onClick={() => onSelectSound(sound)}
               >
                 <div className="sound-card-header">
-                  <span className="sound-emoji">
-                    {categoryEmoji[sound.category] || '📍'}
+                  <span className="sound-icon">
+                    <CategoryIcon category={sound.category} size={22} />
                   </span>
                   <div className="sound-info">
                     <h3>{sound.title}</h3>
@@ -121,7 +115,7 @@ export default function SoundPanel({ sounds, selectedSound, onSelectSound, outbo
                     <p className="sound-meta">
                       {new Date(sound.createdAt).toLocaleDateString('fr-FR')}
                       {!sound.synced && sound.id?.startsWith('local-') && (
-                        <span className="sync-pending"> · ⏳ Non synchronisé</span>
+                        <span className="sync-pending"> · <Clock size={12} aria-hidden="true" /> Non synchronisé</span>
                       )}
                     </p>
                   </div>
@@ -130,7 +124,7 @@ export default function SoundPanel({ sounds, selectedSound, onSelectSound, outbo
                     onClick={(e) => { e.stopPropagation(); handlePlay(sound); }}
                     aria-label={playingId === sound.id ? 'Pause' : 'Écouter'}
                   >
-                    {playingId === sound.id ? '⏸' : '▶'}
+                    {playingId === sound.id ? <Pause size={18} aria-hidden="true" /> : <Play size={18} aria-hidden="true" />}
                   </button>
                 </div>
               </div>

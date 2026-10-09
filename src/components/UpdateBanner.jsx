@@ -7,6 +7,7 @@
 // l'utilisateur décider quand appliquer la mise à jour.
 // ============================================================
 
+import { RefreshCw } from 'lucide-react';
 import { skipWaiting } from '../utils/sw-register';
 import './UpdateBanner.css';
 
@@ -21,7 +22,7 @@ export default function UpdateBanner({ registration, onDismiss }) {
   return (
     <div className="update-banner" role="alert">
       <div className="update-content">
-        <span>🔄</span>
+        <RefreshCw size={20} aria-hidden="true" />
         <p>
           <strong>Nouvelle version disponible !</strong>
           <br />

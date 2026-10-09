@@ -5,6 +5,7 @@
 // Informe l'utilisateur que ses actions seront synchronisées plus tard.
 // ============================================================
 
+import { WifiOff } from 'lucide-react';
 import './OfflineBanner.css';
 
 export default function OfflineBanner({ isOnline, outboxCount }) {
@@ -12,7 +13,7 @@ export default function OfflineBanner({ isOnline, outboxCount }) {
 
   return (
     <div className="offline-banner" role="alert">
-      <span className="offline-icon">📡</span>
+      <WifiOff className="offline-icon" size={20} aria-hidden="true" />
       <div className="offline-text">
         <strong>Hors connexion</strong>
         <p>
