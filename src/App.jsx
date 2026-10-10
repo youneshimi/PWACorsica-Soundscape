@@ -24,12 +24,15 @@ function App() {
 
   const [selectedSound, setSelectedSound] = useState(null);
   const [flyTo, setFlyTo] = useState(null);
-  const [showRecorder, setShowRecorder] = useState(false);
+  const [showRecorder, setShowRecorder] = useState(() =>
+    new URLSearchParams(window.location.search).get('action') === 'record'
+  );
   const [updateRegistration, setUpdateRegistration] = useState(null);
 
   // Enregistrer le Service Worker avec callback de mise à jour
   useEffect(() => {
-    registerSW({
+    return registerSW({
+      enabled: !import.meta.env.DEV,
       onUpdate: (registration) => {
         setUpdateRegistration(registration);
       },
@@ -53,9 +56,11 @@ function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('action') === 'record') {
-      setShowRecorder(true);
       // Nettoyer l'URL
-      window.history.replaceState({}, '', '/');
+      params.delete('action');
+      const query = params.toString();
+      window.history.replaceState(window.history.state, '',
+        `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
     }
   }, []);
 

@@ -1,109 +1,192 @@
-// ============================================================
-// Corsica Soundscape — Service Worker
-// ============================================================
-// Stratégies :
-//   - App Shell (HTML/CSS/JS/icônes) → Cache First (perf)
-//   - Données API (/api/sounds)      → Network First (fraîcheur)
-//   - Fallback offline               → offline.html
-// ============================================================
-
-const CACHE_NAME = 'soundscape-v2';
+// Le build ajoute les fichiers Vite et calcule la version du cache.
+const CACHE_NAME = 'soundscape-v3';
+const DATA_CACHE = 'soundscape-data-v1';
 const CACHE_ASSETS = [
   '/',
+  '/index.html',
   '/offline.html',
   '/manifest.json',
   '/img/icon-192.png',
   '/img/icon-512.png',
+  '/img/icon-maskable-512.png',
 ];
 
-// -- INSTALL : pré-cache l'App Shell --------------------------
 self.addEventListener('install', (event) => {
-  console.log('[SW] Install — cache App Shell');
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(CACHE_ASSETS))
   );
 });
 
-// -- ACTIVATE : nettoie les anciens caches --------------------
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activate — nettoyage anciens caches');
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys
-          .filter((k) => k !== CACHE_NAME)
-          .map((k) => caches.delete(k))
-      )
-    )
-  );
-  // Prend le contrôle immédiatement des pages ouvertes
-  return self.clients.claim();
+  event.waitUntil(activateCaches());
 });
 
-// -- FETCH : routage par type de requête ----------------------
+async function activateCaches() {
+  const keys = await caches.keys();
+  for (const key of keys) {
+    if (!key.startsWith('soundscape-') || key === CACHE_NAME || key === DATA_CACHE) continue;
+
+    // Les anciens caches mélangeaient l'interface et les sons téléchargés.
+    const oldCache = await caches.open(key);
+    const dataCache = await caches.open(DATA_CACHE);
+    let migrated = true;
+    for (const request of await oldCache.keys()) {
+      const url = new URL(request.url);
+      if (url.origin === self.location.origin && /^\/(api|uploads)\//.test(url.pathname)) {
+        const response = await oldCache.match(request);
+        if (response?.status === 200 && !(await dataCache.match(request))) {
+          if (!(await saveResponse(dataCache, request, response))) migrated = false;
+        }
+      }
+    }
+    if (migrated) await caches.delete(key);
+  }
+  await self.clients.claim();
+}
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Ignorer les requêtes non-GET (POST, etc.)
-  if (request.method !== 'GET') return;
+  // Les tuiles OSM gardent le cache HTTP du navigateur, sans téléchargement groupé.
+  if (request.method !== 'GET' || url.origin !== self.location.origin) return;
 
-  // API → Network First (fraîcheur des données)
-  if (url.pathname.startsWith('/api/')) {
+  if (request.mode === 'navigate') {
+    event.respondWith(navigationResponse(request, url));
+  } else if (url.pathname.startsWith('/api/')) {
     event.respondWith(networkFirst(request));
-    return;
+  } else if (url.pathname.startsWith('/uploads/')) {
+    event.respondWith(audioResponse(request));
+  } else if (url.pathname === '/manifest.json' || url.pathname.endsWith('.md')) {
+    const refresh = refreshStatic(request);
+    event.waitUntil(refresh.catch(() => {}));
+    event.respondWith(staleWhileRevalidate(request, refresh));
+  } else if (CACHE_ASSETS.includes(url.pathname)) {
+    event.respondWith(cacheFirst(request));
   }
-
-  // Tout le reste (App Shell, assets) → Cache First (perf)
-  event.respondWith(cacheFirst(request));
 });
 
-// -- STRATÉGIE : Cache First ----------------------------------
-// Idéale pour l'App Shell et les assets statiques.
-// Pourquoi : les fichiers sont versionnés par Vite (hash dans le nom),
-// donc un fichier en cache est toujours le bon. Résultat : chargement
-// instantané même avec un réseau lent.
+async function saveResponse(cache, request, response) {
+  if (!response.ok || response.status === 206) return false;
+  try {
+    await cache.put(request, response.clone());
+    return true;
+  } catch (error) {
+    console.warn('[SW] Cache indisponible :', error);
+    return false;
+  }
+}
+
+async function cachedData(request) {
+  const cache = await caches.open(DATA_CACHE);
+  const response = await cache.match(request);
+  if (response) return response;
+
+  // Si la migration manque de place, l'ancien cache reste utilisable.
+  for (const key of await caches.keys()) {
+    if (!key.startsWith('soundscape-') || key === CACHE_NAME || key === DATA_CACHE) continue;
+    const oldCache = await caches.open(key);
+    const cached = await oldCache.match(request);
+    if (cached?.status === 200) return cached;
+  }
+}
+
+async function navigationResponse(request, url) {
+  const cache = await caches.open(CACHE_NAME);
+  // Le HTML reste avec les bundles de la même version, jusqu'à la mise à jour.
+  if (url.pathname === '/' || url.pathname === '/index.html') {
+    const shell = await cache.match('/');
+    if (shell) return shell;
+  }
+  try {
+    return await fetch(request, { signal: AbortSignal.timeout(5000) });
+  } catch {
+    return (await cache.match('/offline.html')) || new Response('Hors connexion', { status: 503 });
+  }
+}
+
 async function cacheFirst(request) {
-  const cached = await caches.match(request);
+  const cache = await caches.open(CACHE_NAME);
+  const cached = await cache.match(request);
   if (cached) return cached;
 
   try {
     const response = await fetch(request);
-    // Mettre en cache les réponses valides
-    if (response.ok) {
-      const cache = await caches.open(CACHE_NAME);
-      cache.put(request, response.clone());
-    }
+    await saveResponse(cache, request, response);
     return response;
   } catch {
-    // Si c'est une navigation (page), renvoyer offline.html
-    if (request.mode === 'navigate') {
-      return caches.match('/offline.html');
-    }
-    // Sinon, erreur réseau
-    return new Response('Offline', { status: 503 });
+    return new Response('Hors connexion', { status: 503 });
   }
 }
 
-// -- STRATÉGIE : Network First --------------------------------
-// Idéale pour les données API : on veut la version la plus fraîche,
-// mais si le réseau est down, on sert le cache (données locales).
-async function networkFirst(request) {
+async function refreshStatic(request) {
+  const response = await fetch(request);
+  const cache = await caches.open(CACHE_NAME);
+  await saveResponse(cache, request, response);
+  return response;
+}
+
+async function staleWhileRevalidate(request, refresh) {
+  const cache = await caches.open(CACHE_NAME);
+  const cached = await cache.match(request);
+  if (cached) return cached;
   try {
-    const response = await fetch(request);
-    if (response.ok) {
-      const cache = await caches.open(CACHE_NAME);
-      cache.put(request, response.clone());
-    }
+    return await refresh;
+  } catch {
+    return new Response('Hors connexion', { status: 503 });
+  }
+}
+
+async function networkFirst(request) {
+  const cache = await caches.open(DATA_CACHE);
+  try {
+    const response = await fetch(request, { signal: AbortSignal.timeout(5000) });
+    if (response.status >= 500) return (await cachedData(request)) || response;
+    await saveResponse(cache, request, response);
     return response;
   } catch {
-    const cached = await caches.match(request);
+    const cached = await cachedData(request);
     if (cached) return cached;
-    return new Response(JSON.stringify({ error: 'offline' }), {
+    return Response.json({ error: 'offline' }, {
       status: 503,
-      headers: { 'Content-Type': 'application/json' },
     });
   }
+}
+
+async function audioResponse(request) {
+  const cache = await caches.open(DATA_CACHE);
+  const headers = new Headers(request.headers);
+  headers.delete('Range');
+  const fullRequest = new Request(request, { headers });
+  let response = await cachedData(fullRequest);
+  if (!response) {
+    try {
+      response = await fetch(fullRequest);
+      await saveResponse(cache, fullRequest, response);
+    } catch {
+      return new Response('Son indisponible hors connexion', { status: 503 });
+    }
+  }
+  const range = request.headers.get('Range');
+  return range && response.status === 200 ? rangeResponse(response, range) : response;
+}
+
+async function rangeResponse(response, range) {
+  const match = /^bytes=(\d*)-(\d*)$/.exec(range);
+  if (!match || (!match[1] && !match[2])) return response;
+  const body = await response.arrayBuffer();
+  const size = body.byteLength;
+  const start = match[1] ? Number(match[1]) : Math.max(0, size - Number(match[2]));
+  const end = match[1] && match[2] ? Math.min(Number(match[2]), size - 1) : size - 1;
+  if (start >= size || end < start) {
+    return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${size}` } });
+  }
+  const headers = new Headers(response.headers);
+  headers.delete('Content-Encoding');
+  headers.set('Content-Range', `bytes ${start}-${end}/${size}`);
+  headers.set('Content-Length', String(end - start + 1));
+  headers.set('Accept-Ranges', 'bytes');
+  return new Response(body.slice(start, end + 1), { status: 206, headers });
 }
 
 // -- BACKGROUND SYNC ------------------------------------------
@@ -203,7 +286,7 @@ self.addEventListener('message', (event) => {
   // L'app envoie SKIP_WAITING quand l'utilisateur clique "Mettre à jour"
   if (event.data?.type === 'SKIP_WAITING') {
     console.log('[SW] skipWaiting demandé par l\'utilisateur');
-    self.skipWaiting();
+    event.waitUntil(self.skipWaiting());
   }
 });
 

@@ -1,55 +1,78 @@
-// ============================================================
-// Enregistrement du Service Worker + détection mise à jour
-// ============================================================
-// Pourquoi dans un fichier séparé : séparation des responsabilités.
-// Le SW est un fichier statique (public/sw.js), pas bundlé par Vite.
-// ============================================================
+export function registerSW({ enabled = true, onUpdate } = {}) {
+  if (!('serviceWorker' in navigator)) return () => {};
+  const workers = navigator.serviceWorker;
+  let stopped = false;
+  let controlled = Boolean(workers.controller);
+  let refreshing = false;
+  const cleanups = [];
 
-export function registerSW({ onUpdate } = {}) {
-  if (!('serviceWorker' in navigator)) {
-    console.warn('[SW] Service Workers non supportés');
-    return;
+  function listen(target, type, callback) {
+    target.addEventListener(type, callback);
+    cleanups.push(() => target.removeEventListener(type, callback));
   }
 
-  window.addEventListener('load', async () => {
+  async function register() {
     try {
-      const registration = await navigator.serviceWorker.register('/sw.js');
-      console.log('[SW] Enregistré avec succès, scope:', registration.scope);
+      const registration = await workers.register('/sw.js', { updateViaCache: 'none' });
+      if (stopped) return;
 
-      // Détection de mise à jour
-      registration.addEventListener('updatefound', () => {
-        const newWorker = registration.installing;
-        if (!newWorker) return;
+      function checkWaiting() {
+        if (registration.waiting && workers.controller) onUpdate?.(registration);
+      }
 
-        newWorker.addEventListener('statechange', () => {
-          // Un nouveau SW est installé et attend d'être activé
-          if (
-            newWorker.state === 'installed' &&
-            navigator.serviceWorker.controller
-          ) {
-            console.log('[SW] Nouvelle version disponible');
-            // Callback pour afficher la bannière de mise à jour
-            if (onUpdate) onUpdate(registration);
-          }
+      function watchInstalling() {
+        const worker = registration.installing;
+        if (!worker) return;
+        listen(worker, 'statechange', () => {
+          if (worker.state === 'installed') checkWaiting();
         });
-      });
-    } catch (err) {
-      console.error('[SW] Échec enregistrement:', err);
-    }
-  });
+      }
 
-  // Recharger la page quand le nouveau SW prend le contrôle
-  let refreshing = false;
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (refreshing) return;
-    refreshing = true;
-    window.location.reload();
-  });
+      listen(registration, 'updatefound', watchInstalling);
+      checkWaiting();
+      watchInstalling();
+    } catch (error) {
+      if (!stopped) console.warn('[SW] Enregistrement impossible :', error);
+    }
+  }
+
+  if (!enabled) {
+    // Un ancien worker de production ne doit pas intercepter les modules de Vite.
+    workers.getRegistrations().then(async (registrations) => {
+      for (const registration of registrations) {
+        const worker = registration.active || registration.waiting || registration.installing;
+        if (worker && new URL(worker.scriptURL).pathname === '/sw.js') {
+          await registration.unregister();
+        }
+      }
+      if (!stopped && workers.controller?.scriptURL &&
+          new URL(workers.controller.scriptURL).pathname === '/sw.js') {
+        window.location.reload();
+      }
+    }).catch((error) => console.warn('[SW] Désactivation impossible :', error));
+  } else {
+    listen(workers, 'controllerchange', () => {
+      // Le premier contrôle n'est pas une mise à jour et ne nécessite pas de reload.
+      if (!controlled) {
+        controlled = true;
+        return;
+      }
+      if (!refreshing) {
+        refreshing = true;
+        window.location.reload();
+      }
+    });
+
+    if (document.readyState === 'complete') register();
+    else listen(window, 'load', register);
+  }
+
+  return () => {
+    stopped = true;
+    for (const cleanup of cleanups) cleanup();
+  };
 }
 
-// Demander au SW en attente de prendre le contrôle
 export function skipWaiting(registration) {
-  if (registration?.waiting) {
-    registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-  }
+  registration?.waiting?.postMessage({ type: 'SKIP_WAITING' });
 }
