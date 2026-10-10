@@ -7,7 +7,7 @@
 //   - Fallback offline               → offline.html
 // ============================================================
 
-const CACHE_NAME = 'soundscape-v1';
+const CACHE_NAME = 'soundscape-v2';
 const CACHE_ASSETS = [
   '/',
   '/offline.html',
@@ -115,64 +115,87 @@ self.addEventListener('sync', (event) => {
   }
 });
 
-// Synchronise les entrées de l'outbox IndexedDB → serveur
-async function syncOutbox() {
-  // On importe idb depuis le CDN pour lire l'outbox
-  // Note: dans le SW, on utilise importScripts ou on lit directement l'IDB
-  const dbName = 'corsica-soundscape';
-  const storeName = 'outbox';
-
-  const db = await new Promise((resolve, reject) => {
-    const req = indexedDB.open(dbName, 1);
-    req.onerror = () => reject(req.error);
-    req.onsuccess = () => resolve(req.result);
+function idbRequest(request) {
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
   });
+}
 
-  const tx = db.transaction(storeName, 'readonly');
-  const store = tx.objectStore(storeName);
-  const entries = await new Promise((resolve, reject) => {
-    const req = store.getAll();
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
+function transactionDone(tx) {
+  return new Promise((resolve, reject) => {
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error || new Error('Transaction annulée'));
   });
+}
 
-  for (const entry of entries) {
-    try {
-      const formData = new FormData();
-      formData.append('title', entry.title);
-      formData.append('description', entry.description || '');
-      formData.append('latitude', entry.latitude);
-      formData.append('longitude', entry.longitude);
-      formData.append('category', entry.category || 'autre');
-      formData.append('audio', entry.audioBlob, 'recording.webm');
+async function legacyLocalId(db, entry) {
+  if (entry.localId) return entry.localId;
+  const sounds = await idbRequest(db.transaction('sounds').objectStore('sounds').getAll());
+  const matches = [];
+  for (const sound of sounds) {
+    if (sound.synced || sound.title !== entry.title ||
+        (sound.description || '') !== (entry.description || '') ||
+        sound.latitude !== entry.latitude || sound.longitude !== entry.longitude ||
+        sound.category !== entry.category ||
+        !sound.audioBlob || !entry.audioBlob ||
+        sound.audioBlob.size !== entry.audioBlob.size ||
+        sound.audioBlob.type !== entry.audioBlob.type) continue;
+    const left = new Uint8Array(await sound.audioBlob.arrayBuffer());
+    const right = new Uint8Array(await entry.audioBlob.arrayBuffer());
+    if (left.every((byte, index) => byte === right[index])) matches.push(sound.id);
+  }
+  return matches.length === 1 ? matches[0] : undefined;
+}
+
+async function sendOutbox() {
+  const db = await idbRequest(indexedDB.open('corsica-soundscape', 1));
+  try {
+    const entries = await idbRequest(db.transaction('outbox').objectStore('outbox').getAll());
+    for (const entry of entries) {
+      const localId = await legacyLocalId(db, entry);
+      const clientId = entry.clientId || 'legacy-' + entry.createdAt + '-' + entry.id;
+      const data = new FormData();
+      data.append('title', entry.title);
+      data.append('description', entry.description || '');
+      data.append('latitude', entry.latitude);
+      data.append('longitude', entry.longitude);
+      data.append('category', entry.category || 'autre');
+      if (entry.audioBlob) data.append('audio', entry.audioBlob, 'recording.webm');
 
       const response = await fetch('/api/sounds', {
         method: 'POST',
-        body: formData,
+        headers: { 'Idempotency-Key': clientId },
+        body: data,
+        signal: AbortSignal.timeout(15000),
       });
+      if (!response.ok) throw new Error('Envoi impossible (' + response.status + ')');
+      const sound = await response.json();
+      if (!sound.id) throw new Error('Réponse du serveur invalide');
 
-      if (response.ok) {
-        // Supprimer de l'outbox après envoi réussi
-        const delTx = db.transaction(storeName, 'readwrite');
-        delTx.objectStore(storeName).delete(entry.id);
-        await new Promise((resolve) => {
-          delTx.oncomplete = resolve;
-        });
-        console.log(`[SW] Sync OK — son "${entry.title}" envoyé`);
+      const tx = db.transaction(['sounds', 'outbox'], 'readwrite');
+      const done = transactionDone(tx);
+      tx.objectStore('sounds').put({ ...sound, audioBlob: entry.audioBlob });
+      if (localId && localId !== sound.id) tx.objectStore('sounds').delete(localId);
+      tx.objectStore('outbox').delete(entry.id);
+      await done;
 
-        // Notifier les clients
-        const clients = await self.clients.matchAll();
-        clients.forEach((client) => {
-          client.postMessage({ type: 'SYNC_COMPLETE', id: entry.id });
-        });
+      const clients = await self.clients.matchAll({ type: 'window' });
+      for (const client of clients) {
+        client.postMessage({ type: 'SYNC_COMPLETE', id: entry.id, sound });
       }
-    } catch (err) {
-      console.error(`[SW] Sync échoué pour "${entry.title}"`, err);
-      // On ne supprime pas de l'outbox → sera re-tenté
     }
+  } finally {
+    db.close();
   }
+}
 
-  db.close();
+// Un échec doit rejeter la promesse pour permettre une nouvelle tentative.
+function syncOutbox() {
+  return self.navigator?.locks
+    ? self.navigator.locks.request('soundscape-sync', sendOutbox)
+    : sendOutbox();
 }
 
 // -- MESSAGE : écoute les messages de l'app -------------------

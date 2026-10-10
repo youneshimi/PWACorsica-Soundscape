@@ -1,144 +1,93 @@
-// ============================================================
-// Hook : gestion des sons (chargement, ajout, sync)
-// ============================================================
-
 import { useState, useEffect, useCallback } from 'react';
-import { getAllSounds, putAllSounds, putSound, addToOutbox, getOutbox, removeFromOutbox } from '../utils/db';
-
-const API_URL = '/api/sounds';
+import { getAllSounds, putAllSounds, savePendingSound, getOutbox } from '../utils/db.js';
+import { syncOutbox, requestBackgroundSync } from '../utils/sync.js';
 
 export function useSounds() {
   const [sounds, setSounds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [outboxCount, setOutboxCount] = useState(0);
 
-  // Charger les sons : d'abord IndexedDB (instantané), puis réseau
-  const loadSounds = useCallback(async () => {
-    setLoading(true);
-    try {
-      // 1. Afficher les sons locaux immédiatement (offline-first)
-      const localSounds = await getAllSounds();
-      if (localSounds.length > 0) {
-        setSounds(localSounds);
-      }
-
-      // 2. Tenter de récupérer les sons du serveur
-      if (navigator.onLine) {
-        try {
-          const res = await fetch(API_URL);
-          if (res.ok) {
-            const serverSounds = await res.json();
-            await putAllSounds(serverSounds);
-            setSounds(serverSounds);
-          }
-        } catch {
-          console.log('[Sounds] Réseau indisponible, données locales utilisées');
-        }
-      }
-
-      // 3. Compter l'outbox
-      const outbox = await getOutbox();
-      setOutboxCount(outbox.length);
-    } finally {
-      setLoading(false);
-    }
+  const refreshLocal = useCallback(async () => {
+    const entries = await getOutbox();
+    setSounds(await getAllSounds());
+    setOutboxCount(entries.length);
+    setLoading(false);
   }, []);
 
-  useEffect(() => {
-    loadSounds();
-  }, [loadSounds]);
-
-  // Écouter les messages du SW (sync terminée)
-  useEffect(() => {
-    const handleMessage = (event) => {
-      if (event.data?.type === 'SYNC_COMPLETE') {
-        console.log('[Sounds] Sync complète, rechargement');
-        loadSounds();
+  const loadSounds = useCallback(async () => {
+    await refreshLocal();
+    if (!navigator.onLine) return;
+    try {
+      const response = await fetch('/api/sounds', { signal: AbortSignal.timeout(5000) });
+      if (response.ok) {
+        await putAllSounds(await response.json());
+        await refreshLocal();
       }
-    };
-    navigator.serviceWorker?.addEventListener('message', handleMessage);
-    return () => navigator.serviceWorker?.removeEventListener('message', handleMessage);
+    } catch {
+      // Les données locales restent affichées si le serveur est indisponible.
+    }
+  }, [refreshLocal]);
+
+  const flushOutbox = useCallback(async () => {
+    try {
+      if (navigator.onLine) await syncOutbox();
+    } catch (error) {
+      console.warn('[Sounds] Envoi différé:', error.message);
+    }
+    await loadSounds();
+    if ((await getOutbox()).length) await requestBackgroundSync();
   }, [loadSounds]);
 
-  // Ajouter un son (enregistrement)
   const addSound = useCallback(async (soundData) => {
-    // Créer l'objet son local
-    const localSound = {
-      id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    const id = 'local-' + crypto.randomUUID();
+    await savePendingSound({
       ...soundData,
+      id,
+      clientId: id,
       createdAt: new Date().toISOString(),
       synced: false,
-    };
-
-    // Sauvegarder dans IndexedDB pour affichage immédiat
-    await putSound(localSound);
-    setSounds((prev) => [localSound, ...prev]);
-
-    // Ajouter à l'outbox pour sync
-    await addToOutbox({
-      title: soundData.title,
-      description: soundData.description,
-      latitude: soundData.latitude,
-      longitude: soundData.longitude,
-      category: soundData.category,
-      audioBlob: soundData.audioBlob,
     });
-
-    // Tenter l'envoi immédiat si en ligne
+    await refreshLocal();
     if (navigator.onLine) {
       await flushOutbox();
     } else {
-      // Demander un Background Sync
-      const registration = await navigator.serviceWorker?.ready;
-      if (registration?.sync) {
-        try {
-          await registration.sync.register('sync-outbox');
-          console.log('[Sounds] Background Sync enregistré');
-        } catch {
-          console.log('[Sounds] Background Sync non supporté');
-        }
-      }
-      setOutboxCount((c) => c + 1);
+      await requestBackgroundSync();
     }
-  }, []);
+  }, [refreshLocal, flushOutbox]);
 
-  // Vider l'outbox manuellement (fallback pour Firefox/Safari)
-  const flushOutbox = useCallback(async () => {
-    const entries = await getOutbox();
-    for (const entry of entries) {
-      try {
-        const formData = new FormData();
-        formData.append('title', entry.title);
-        formData.append('description', entry.description || '');
-        formData.append('latitude', entry.latitude);
-        formData.append('longitude', entry.longitude);
-        formData.append('category', entry.category || 'autre');
-        if (entry.audioBlob) {
-          formData.append('audio', entry.audioBlob, 'recording.webm');
-        }
-
-        const res = await fetch(API_URL, { method: 'POST', body: formData });
-        if (res.ok) {
-          await removeFromOutbox(entry.id);
-          console.log(`[Sounds] Outbox sync OK — "${entry.title}"`);
-        }
-      } catch (err) {
-        console.error(`[Sounds] Sync échoué pour "${entry.title}"`, err);
-        break; // Arrêter si le réseau flanche
-      }
-    }
-    await loadSounds();
-  }, [loadSounds]);
-
-  // Écouter le retour du réseau pour flush (fallback Background Sync)
   useEffect(() => {
-    const handleOnline = () => {
-      console.log('[Sounds] Réseau de retour — flush outbox');
-      flushOutbox();
+    let stopped = false;
+    const flush = () => {
+      if (!stopped) flushOutbox().catch((error) => console.error('[Sounds]', error));
     };
-    window.addEventListener('online', handleOnline);
-    return () => window.removeEventListener('online', handleOnline);
-  }, [flushOutbox]);
+    const handleMessage = (event) => {
+      if (event.data?.type === 'SYNC_COMPLETE') {
+        refreshLocal().catch((error) => console.error('[Sounds]', error));
+      }
+    };
+    const firstLoad = window.setTimeout(flush, 0);
+    const retry = window.setInterval(async () => {
+      if (navigator.onLine && !stopped) {
+        try {
+          if ((await getOutbox()).length) flush();
+        } catch (error) {
+          console.error('[Sounds]', error);
+        }
+      }
+    }, 30000);
+
+    window.addEventListener('online', flush);
+    window.addEventListener('focus', flush);
+    navigator.serviceWorker?.addEventListener('message', handleMessage);
+    return () => {
+      stopped = true;
+      window.clearTimeout(firstLoad);
+      window.clearInterval(retry);
+      window.removeEventListener('online', flush);
+      window.removeEventListener('focus', flush);
+      navigator.serviceWorker?.removeEventListener('message', handleMessage);
+    };
+  }, [flushOutbox, refreshLocal]);
 
   return { sounds, loading, outboxCount, addSound, reload: loadSounds };
 }

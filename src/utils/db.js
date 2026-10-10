@@ -1,133 +1,173 @@
-// ============================================================
-// IndexedDB — Modèle de données Corsica Soundscape
-// ============================================================
-// Utilise la librairie `idb` pour une API Promise-based.
-//
-// Deux stores :
-//   1. `sounds`  — les sons téléchargés ou créés localement
-//   2. `outbox`  — file d'attente de synchronisation
-//
-// Pourquoi IndexedDB et pas localStorage ?
-//   - localStorage est synchrone (bloque le thread principal)
-//   - localStorage est limité à ~5 Mo de strings
-//   - IndexedDB stocke des blobs (audio), des objets structurés
-//   - IndexedDB supporte les index pour requêter par catégorie, date, etc.
-// ============================================================
-
 import { openDB } from 'idb';
 
 const DB_NAME = 'corsica-soundscape';
-const DB_VERSION = 1;
+let dbPromise;
 
-// -- Ouvrir / créer la base -----------------------------------
-export async function getDB() {
-  return openDB(DB_NAME, DB_VERSION, {
-    upgrade(db) {
-      // Store principal : les sons
-      if (!db.objectStoreNames.contains('sounds')) {
-        const soundStore = db.createObjectStore('sounds', { keyPath: 'id' });
-        soundStore.createIndex('by-category', 'category');
-        soundStore.createIndex('by-date', 'createdAt');
-        soundStore.createIndex('by-location', ['latitude', 'longitude']);
-      }
-
-      // Outbox : actions en attente de synchronisation
-      if (!db.objectStoreNames.contains('outbox')) {
-        db.createObjectStore('outbox', {
-          keyPath: 'id',
-          autoIncrement: true,
-        });
-      }
-    },
-  });
+export function getDB() {
+  if (!dbPromise) {
+    dbPromise = openDB(DB_NAME, 1, {
+      upgrade(db) {
+        const sounds = db.createObjectStore('sounds', { keyPath: 'id' });
+        sounds.createIndex('by-category', 'category');
+        sounds.createIndex('by-date', 'createdAt');
+        sounds.createIndex('by-location', ['latitude', 'longitude']);
+        db.createObjectStore('outbox', { keyPath: 'id', autoIncrement: true });
+      },
+    }).catch((error) => {
+      dbPromise = undefined;
+      throw error;
+    });
+  }
+  return dbPromise;
 }
 
-// ============================================================
-// CRUD — Store `sounds`
-// ============================================================
+function storedSound(sound) {
+  const copy = { ...sound };
+  if (copy.audioUrl?.startsWith('blob:')) delete copy.audioUrl;
+  return copy;
+}
 
-// Récupérer tous les sons
 export async function getAllSounds() {
   const db = await getDB();
-  return db.getAll('sounds');
+  const sounds = await db.getAll('sounds');
+  return sounds.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
 }
 
-// Récupérer un son par ID
 export async function getSound(id) {
-  const db = await getDB();
-  return db.get('sounds', id);
+  return (await getDB()).get('sounds', id);
 }
 
-// Sauvegarder un son (ajout ou mise à jour)
 export async function putSound(sound) {
-  const db = await getDB();
-  return db.put('sounds', sound);
+  return (await getDB()).put('sounds', storedSound(sound));
 }
 
-// Supprimer un son
 export async function deleteSound(id) {
-  const db = await getDB();
-  return db.delete('sounds', id);
+  return (await getDB()).delete('sounds', id);
 }
 
-// Sons par catégorie
 export async function getSoundsByCategory(category) {
-  const db = await getDB();
-  return db.getAllFromIndex('sounds', 'by-category', category);
+  return (await getDB()).getAllFromIndex('sounds', 'by-category', category);
 }
 
-// Sauvegarder tous les sons du serveur (sync initiale)
-export async function putAllSounds(sounds) {
+// Le son et sa demande d'envoi sont enregistrés ensemble.
+export async function savePendingSound(sound) {
   const db = await getDB();
-  const tx = db.transaction('sounds', 'readwrite');
-  for (const sound of sounds) {
-    tx.store.put(sound);
-  }
-  await tx.done;
-}
-
-// ============================================================
-// OUTBOX — File de synchronisation
-// ============================================================
-// Pattern outbox :
-//   1. L'utilisateur crée un son → sauvé dans `outbox`
-//   2. Si en ligne → envoi immédiat au serveur, suppression de l'outbox
-//   3. Si hors ligne → reste dans l'outbox
-//   4. Au retour du réseau → Background Sync ou event `online` vide l'outbox
-// ============================================================
-
-// Ajouter une entrée à l'outbox
-export async function addToOutbox(entry) {
-  const db = await getDB();
-  const id = await db.add('outbox', {
-    ...entry,
-    createdAt: new Date().toISOString(),
-    status: 'pending',
+  const tx = db.transaction(['sounds', 'outbox'], 'readwrite');
+  const saved = tx.objectStore('sounds').put(storedSound(sound));
+  const queued = tx.objectStore('outbox').add({
+    localId: sound.id,
+    clientId: sound.clientId,
+    title: sound.title,
+    description: sound.description,
+    latitude: sound.latitude,
+    longitude: sound.longitude,
+    category: sound.category,
+    audioBlob: sound.audioBlob,
+    createdAt: sound.createdAt,
   });
-  console.log(`[DB] Ajouté à l'outbox, id=${id}`);
-  return id;
+  await Promise.all([saved, queued, tx.done]);
 }
 
-// Lire toutes les entrées de l'outbox
+// Conserver les sons en attente et les fichiers audio déjà téléchargés.
+export async function putAllSounds(serverSounds) {
+  const db = await getDB();
+  const tx = db.transaction(['sounds', 'outbox'], 'readwrite');
+  const store = tx.objectStore('sounds');
+  const outbox = tx.objectStore('outbox');
+  const localSounds = await store.getAll();
+  const entries = await outbox.getAll();
+  const writes = [];
+
+  for (const sound of serverSounds) {
+    const entry = sound.clientId && entries.find((item) => item.clientId === sound.clientId);
+    const pending = localSounds.find((item) =>
+      item.id === entry?.localId ||
+      (sound.clientId && item.clientId === sound.clientId && item.id !== sound.id));
+    const existing = localSounds.find((item) => item.id === sound.id);
+    const local = pending || existing;
+    writes.push(store.put(storedSound({
+      ...sound,
+      ...(local?.audioBlob ? { audioBlob: local.audioBlob } : {}),
+    })));
+    if (local && local.id !== sound.id) writes.push(store.delete(local.id));
+    if (entry) writes.push(outbox.delete(entry.id));
+  }
+  await Promise.all([...writes, tx.done]);
+}
+
+export async function completeSync(entry, serverSound) {
+  const db = await getDB();
+  const tx = db.transaction(['sounds', 'outbox'], 'readwrite');
+  const writes = [tx.objectStore('sounds').put(storedSound({
+    ...serverSound,
+    audioBlob: entry.audioBlob,
+  }))];
+  if (entry.localId && entry.localId !== serverSound.id) {
+    writes.push(tx.objectStore('sounds').delete(entry.localId));
+  }
+  writes.push(tx.objectStore('outbox').delete(entry.id));
+  await Promise.all([...writes, tx.done]);
+}
+
+export async function addToOutbox(entry) {
+  return (await getDB()).add('outbox', {
+    ...entry,
+    createdAt: entry.createdAt || new Date().toISOString(),
+  });
+}
+
+async function sameAudio(a, b) {
+  if (!a || !b || a.size !== b.size || a.type !== b.type) return false;
+  const left = new Uint8Array(await a.arrayBuffer());
+  const right = new Uint8Array(await b.arrayBuffer());
+  return left.every((byte, index) => byte === right[index]);
+}
+
+// Raccorder les anciennes entrées seulement quand un seul son correspond.
 export async function getOutbox() {
   const db = await getDB();
-  return db.getAll('outbox');
+  const entries = await db.getAll('outbox');
+  const oldEntries = entries.filter((entry) => !entry.clientId);
+  if (!oldEntries.length) return entries;
+
+  const sounds = await db.getAll('sounds');
+  const linked = new Set(entries.map((entry) => entry.localId).filter(Boolean));
+  for (const entry of oldEntries) {
+    const matches = [];
+    for (const sound of sounds) {
+      if (sound.synced || linked.has(sound.id) ||
+          sound.title !== entry.title ||
+          (sound.description || '') !== (entry.description || '') ||
+          sound.latitude !== entry.latitude || sound.longitude !== entry.longitude ||
+          sound.category !== entry.category) continue;
+      if (await sameAudio(sound.audioBlob, entry.audioBlob)) matches.push(sound);
+    }
+    if (matches.length === 1) {
+      entry.localId = matches[0].id;
+      linked.add(entry.localId);
+    }
+    entry.clientId = 'legacy-' + entry.createdAt + '-' + entry.id;
+  }
+
+  const tx = db.transaction('outbox', 'readwrite');
+  for (const entry of oldEntries) {
+    // Le Service Worker peut avoir terminé l'envoi entre-temps.
+    const current = await tx.store.get(entry.id);
+    if (current) await tx.store.put({ ...current, clientId: entry.clientId, localId: entry.localId });
+  }
+  const result = await tx.store.getAll();
+  await tx.done;
+  return result;
 }
 
-// Supprimer une entrée de l'outbox (après sync réussie)
 export async function removeFromOutbox(id) {
-  const db = await getDB();
-  return db.delete('outbox', id);
+  return (await getDB()).delete('outbox', id);
 }
 
-// Vider toute l'outbox
 export async function clearOutbox() {
-  const db = await getDB();
-  return db.clear('outbox');
+  return (await getDB()).clear('outbox');
 }
 
-// Compter les entrées en attente
 export async function getOutboxCount() {
-  const db = await getDB();
-  return db.count('outbox');
+  return (await getDB()).count('outbox');
 }

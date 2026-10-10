@@ -16,12 +16,12 @@ import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
 import { randomUUID } from 'crypto';
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
-import { join, dirname } from 'path';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from 'fs';
+import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const app = express();
+export const app = express();
 const PORT = process.env.PORT || 3001;
 
 // -- Config ---------------------------------------------------
@@ -29,11 +29,11 @@ app.use(cors());
 app.use(express.json());
 
 // Dossier pour les fichiers audio
-const UPLOADS_DIR = join(__dirname, 'uploads');
+const UPLOADS_DIR = process.env.SOUNDS_UPLOADS_DIR || join(__dirname, 'uploads');
 if (!existsSync(UPLOADS_DIR)) mkdirSync(UPLOADS_DIR, { recursive: true });
 
 // Dossier pour la "base de données" JSON
-const DB_FILE = join(__dirname, 'data', 'sounds.json');
+const DB_FILE = join(process.env.SOUNDS_DATA_DIR || join(__dirname, 'data'), 'sounds.json');
 const DB_DIR = dirname(DB_FILE);
 if (!existsSync(DB_DIR)) mkdirSync(DB_DIR, { recursive: true });
 
@@ -94,8 +94,25 @@ app.get('/api/sounds/:id', (req, res) => {
 });
 
 // POST /api/sounds — Créer un nouveau son
-app.post('/api/sounds', upload.single('audio'), (req, res) => {
+app.post('/api/sounds', (req, res, next) => {
+  const clientId = req.get('Idempotency-Key');
+  if (clientId && clientId.length > 128) {
+    return res.status(400).json({ error: 'Identifiant d’envoi invalide' });
+  }
+  const existing = clientId && readDB().find((sound) => sound.clientId === clientId);
+  if (existing) return res.json(existing);
+  next();
+}, upload.single('audio'), (req, res) => {
   const { title, description, latitude, longitude, category } = req.body;
+  const clientId = req.get('Idempotency-Key');
+  const sounds = readDB();
+
+  // Une autre requête peut avoir terminé pendant le transfert du fichier.
+  const existing = clientId && sounds.find((sound) => sound.clientId === clientId);
+  if (existing) {
+    if (req.file) unlinkSync(req.file.path);
+    return res.json(existing);
+  }
 
   if (!title || !latitude || !longitude) {
     return res.status(400).json({ error: 'Titre, latitude et longitude requis' });
@@ -103,6 +120,7 @@ app.post('/api/sounds', upload.single('audio'), (req, res) => {
 
   const sound = {
     id: randomUUID(),
+    ...(clientId ? { clientId } : {}),
     title,
     description: description || '',
     latitude: parseFloat(latitude),
@@ -114,7 +132,6 @@ app.post('/api/sounds', upload.single('audio'), (req, res) => {
     synced: true,
   };
 
-  const sounds = readDB();
   sounds.unshift(sound); // Plus récent en premier
   writeDB(sounds);
 
@@ -165,11 +182,13 @@ app.put('/api/sounds/:id', (req, res) => {
 });
 
 // -- Démarrage ------------------------------------------------
-app.listen(PORT, () => {
-  console.log(`🎧 Corsica Soundscape API → http://localhost:${PORT}`);
-  console.log(`   Endpoints :`);
-  console.log(`   GET  /api/sounds`);
-  console.log(`   POST /api/sounds`);
-  console.log(`   GET  /api/sounds/:id`);
-  console.log(`   PUT  /api/sounds/:id (bonus If-Match)`);
-});
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  app.listen(PORT, () => {
+    console.log(`🎧 Corsica Soundscape API → http://localhost:${PORT}`);
+    console.log('   Endpoints :');
+    console.log('   GET  /api/sounds');
+    console.log('   POST /api/sounds');
+    console.log('   GET  /api/sounds/:id');
+    console.log('   PUT  /api/sounds/:id (bonus If-Match)');
+  });
+}

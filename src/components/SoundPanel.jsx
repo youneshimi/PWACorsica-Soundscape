@@ -2,9 +2,10 @@
 // Composant : Panneau latéral — liste des sons + player
 // ============================================================
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Clock, Headphones, Pause, Play, X } from 'lucide-react';
 import CategoryIcon from './CategoryIcon';
+import { getAudioSource } from '../utils/audio.js';
 import './SoundPanel.css';
 
 const categories = [
@@ -22,31 +23,58 @@ export default function SoundPanel({ sounds, selectedSound, onSelectSound, outbo
   const [filter, setFilter] = useState('all');
   const [isOpen, setIsOpen] = useState(false);
   const audioRef = useRef(null);
+  const sourceRef = useRef(null);
   const [playingId, setPlayingId] = useState(null);
+  const [playError, setPlayError] = useState('');
 
   const filtered = filter === 'all'
     ? sounds
     : sounds.filter((s) => s.category === filter);
 
-  const handlePlay = (sound) => {
+  const stopPlayback = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.onended = null;
+      audioRef.current.onerror = null;
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    sourceRef.current?.release();
+    sourceRef.current = null;
+  }, []);
+
+  useEffect(() => stopPlayback, [stopPlayback]);
+
+  const handlePlay = async (sound) => {
+    setPlayError('');
     if (playingId === sound.id) {
-      audioRef.current?.pause();
+      stopPlayback();
       setPlayingId(null);
       return;
     }
 
-    // Si c'est un blob local (pas encore synchronisé)
-    const src = sound.audioUrl || (sound.audioBlob ? URL.createObjectURL(sound.audioBlob) : null);
-    if (!src) return;
-
-    if (audioRef.current) {
-      audioRef.current.pause();
+    const source = getAudioSource(sound);
+    if (!source) {
+      setPlayError('Le fichier audio de ce son est indisponible.');
+      return;
     }
-    const audio = new Audio(src);
+    stopPlayback();
+    sourceRef.current = source;
+    const audio = new Audio(source.url);
     audioRef.current = audio;
-    audio.play();
     setPlayingId(sound.id);
-    audio.onended = () => setPlayingId(null);
+    audio.onended = () => {
+      stopPlayback();
+      setPlayingId(null);
+    };
+    try {
+      await audio.play();
+    } catch {
+      if (audioRef.current === audio) {
+        stopPlayback();
+        setPlayingId(null);
+        setPlayError('Ce son n’a pas pu être lu. Réessayez après avoir vérifié la connexion.');
+      }
+    }
   };
 
   return (
@@ -91,6 +119,7 @@ export default function SoundPanel({ sounds, selectedSound, onSelectSound, outbo
 
         {/* Liste des sons */}
         <div className="sound-list">
+          {playError && <p className="error-msg" role="alert">{playError}</p>}
           {filtered.length === 0 ? (
             <div className="empty-state">
               <p>Aucun son dans cette catégorie.</p>
