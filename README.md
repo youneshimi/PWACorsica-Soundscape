@@ -69,6 +69,30 @@ Une fois l’application déployée en HTTPS, ouvrez son URL sur un téléphone 
 
 La détection utilise `display-mode: standalone` ainsi que `navigator.standalone` sur iOS. Le test sur un vrai téléphone reste à effectuer après le déploiement.
 
+### Vérifier le contenu public et le SEO
+
+La présentation de l’accueil est dans le HTML initial, sous « À propos ». Elle reste lisible sans JavaScript. [public/soundscape.md](./public/soundscape.md) reprend ce contenu en Markdown ; gardez les deux versions cohérentes si vous changez le texte. Ce fichier est précaché, y compris lors de son ouverture depuis un lien hors connexion. Le HTML référence cette version avec `rel="alternate"`, et `llms.txt` la signale aussi.
+
+Le domaine public n’est pas encore connu. Copiez `.env.example` vers `.env.production.local` et renseignez `SITE_URL` avec l’adresse HTTPS réelle, sans sous-chemin. Vous pouvez aussi définir cette variable dans les paramètres de build de l’hébergeur. Puis relancez `npm run build`.
+
+Le build ajoute automatiquement la canonical, `og:url`, `og:image` (l’icône 512 existante) et l’URL du `WebApplication` JSON-LD dans `dist/index.html`. Il utilise le même domaine pour `dist/robots.txt`, `dist/sitemap.xml` et les liens de `dist/llms.txt`. Sans `SITE_URL`, ces URL restent absentes et le sitemap reste vide : aucune adresse de déploiement fictive n’est publiée. La configuration suppose que l’application est servie à la racine du domaine.
+
+Avec `npm run preview`, vérifiez depuis PowerShell :
+
+```powershell
+curl.exe -A "GPTBot" http://localhost:4173/
+curl.exe -A "ClaudeBot" http://localhost:4173/soundscape.md
+curl.exe -I http://localhost:4173/soundscape.md
+curl.exe -H "Accept: text/markdown" http://localhost:4173/
+curl.exe http://localhost:4173/robots.txt
+curl.exe http://localhost:4173/sitemap.xml
+curl.exe http://localhost:4173/llms.txt
+```
+
+L’accueil doit contenir le titre, la présentation et les listes sans exécuter JavaScript ; il reste en HTML même avec `Accept: text/markdown`. Le Markdown doit être servi avec `Content-Type: text/markdown; charset=utf-8`. Vite ajoute aussi `X-Robots-Tag: noindex` à cette version pour privilégier l’accueil HTML dans les résultats de recherche.
+
+Après déploiement, refaites ces vérifications avec le domaine réel, configurez les en-têtes du Markdown sur l’hébergeur et vérifiez que l’image de partage est accessible. Le score Lighthouse SEO et les données structurées restent à vérifier sur l’URL publique.
+
 ## Stack
 
 - **Frontend** : React 19 + Vite

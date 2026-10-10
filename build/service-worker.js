@@ -15,7 +15,7 @@ export function serviceWorkerPlugin() {
       const output = resolve(config.root, config.build.outDir);
       const source = await readFile(resolve(config.publicDir, 'sw.js'), 'utf8');
       const shell = [
-        '/', '/index.html', '/offline.html', '/manifest.json',
+        '/', '/index.html', '/offline.html', '/manifest.json', '/soundscape.md',
         '/img/icon-192.png', '/img/icon-512.png', '/img/icon-maskable-512.png',
       ];
       const files = Object.keys(bundle).filter((file) => !file.endsWith('.map')).sort();

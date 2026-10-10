@@ -6,6 +6,7 @@ const CACHE_ASSETS = [
   '/index.html',
   '/offline.html',
   '/manifest.json',
+  '/soundscape.md',
   '/img/icon-192.png',
   '/img/icon-512.png',
   '/img/icon-maskable-512.png',
@@ -51,7 +52,7 @@ self.addEventListener('fetch', (event) => {
   // Les tuiles OSM gardent le cache HTTP du navigateur, sans téléchargement groupé.
   if (request.method !== 'GET' || url.origin !== self.location.origin) return;
 
-  if (request.mode === 'navigate') {
+  if (request.mode === 'navigate' && url.pathname !== '/soundscape.md') {
     event.respondWith(navigationResponse(request, url));
   } else if (url.pathname.startsWith('/api/')) {
     event.respondWith(networkFirst(request));

@@ -108,6 +108,19 @@ test('un manifeste en cache reste accessible si son rafraîchissement échoue', 
   await request.finished();
 });
 
+test('le lien Markdown ouvre la présentation précachée hors connexion', async () => {
+  const sw = worker();
+  const cache = await sw.caches.open('soundscape-v3');
+  await cache.put('/soundscape.md', new Response('# Corsica Soundscape', {
+    headers: { 'Content-Type': 'text/markdown; charset=utf-8' },
+  }));
+  const request = sw.request('/soundscape.md', { navigate: true });
+  const response = await request.response;
+  assert.match(response.headers.get('Content-Type'), /text\/markdown/);
+  assert.equal(await response.text(), '# Corsica Soundscape');
+  await request.finished();
+});
+
 test('un son écouté en ligne reste lisible et navigable hors connexion', async () => {
   let calls = 0;
   const sw = worker(async (request) => {

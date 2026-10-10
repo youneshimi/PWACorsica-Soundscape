@@ -125,9 +125,68 @@ button:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible,
+summary:focus-visible,
 a:focus-visible {
   outline: 2px solid var(--color-text);
   outline-offset: 3px;
+}
+
+/* Présentation publique */
+.public-info {
+  position: fixed;
+  top: calc(16px + env(safe-area-inset-top, 0px));
+  right: 16px;
+  z-index: 1100;
+  max-width: calc(100% - 32px);
+  background: var(--color-surface);
+  border: 1px solid var(--color-surface-hover);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.public-info summary {
+  padding: 10px 14px;
+  min-height: 44px;
+  color: var(--color-primary);
+  cursor: pointer;
+}
+
+.public-content {
+  width: 380px;
+  max-width: 100%;
+  max-height: 70vh;
+  max-height: 70dvh;
+  padding: 4px 18px 18px;
+  overflow-y: auto;
+  font-size: 0.9rem;
+}
+
+.public-content h1 {
+  font-size: 1.3rem;
+}
+
+.public-content h2 {
+  margin-top: 18px;
+  font-size: 1rem;
+}
+
+.public-content p,
+.public-content ul,
+.public-content ol {
+  margin-top: 10px;
+}
+
+.public-content ul,
+.public-content ol {
+  padding-left: 20px;
+}
+
+.public-content li + li {
+  margin-top: 6px;
+}
+
+.public-content a {
+  color: var(--color-primary);
 }
 
 button:disabled {

@@ -23,6 +23,7 @@
 
     <!-- SEO -->
     <meta name="robots" content="index, follow" />
+    <link rel="alternate" type="text/markdown" href="/soundscape.md" title="Présentation de Corsica Soundscape" />
 
     <!-- JSON-LD Structured Data -->
     <script type="application/ld+json">
@@ -55,20 +56,31 @@
     </script>
   </head>
   <body>
-    <!-- Contenu public visible par les crawlers (SEO / GEO) -->
-    <noscript>
-      <h1>Corsica Soundscape</h1>
-      <p>Carte sonore collaborative de la Corse. Explorez les ambiances de l'île : mer, maquis, villages, marchés.
-         Enregistrez vos propres sons et partagez-les avec la communauté.</p>
-      <h2>Sons populaires</h2>
-      <ul>
-        <li>Vagues à Palombaggia — Porto-Vecchio</li>
-        <li>Cloches de la cathédrale — Ajaccio</li>
-        <li>Vent dans le maquis — Bavella</li>
-        <li>Marché matinal — Bastia</li>
-      </ul>
-      <p>Activez JavaScript pour profiter de la carte interactive et enregistrer vos sons.</p>
-    </noscript>
+    <details class="public-info">
+      <summary>À propos</summary>
+      <main class="public-content">
+        <h1>Corsica Soundscape</h1>
+        <p>Une carte sonore collaborative pour découvrir la Corse à travers ses ambiances : la mer, le maquis, les villages et les marchés. Écoutez les sons partagés sur la carte ou ajoutez votre propre enregistrement.</p>
+        <h2>Comment participer ?</h2>
+        <ol>
+          <li>Choisissez un point sur la carte pour écouter un son.</li>
+          <li>Ouvrez le formulaire, autorisez le microphone et enregistrez une ambiance.</li>
+          <li>Donnez un titre au son, choisissez sa catégorie et indiquez le lieu avant de sauvegarder.</li>
+        </ol>
+        <h2>Quelques idées d’ambiances</h2>
+        <ul>
+          <li>Les vagues sur une plage de Porto-Vecchio.</li>
+          <li>Les cloches d’un village près d’Ajaccio.</li>
+          <li>Le vent dans le maquis de Bavella.</li>
+          <li>Les conversations d’un marché à Bastia.</li>
+        </ul>
+        <p>Ces exemples sont des idées d’enregistrement. Les sons disponibles apparaissent sur la carte.</p>
+        <h2>Hors connexion</h2>
+        <p>Après une première visite en ligne, l’application peut s’ouvrir sans réseau. Vos enregistrements restent sur cet appareil et sont envoyés quand la connexion revient. Les sons déjà téléchargés restent accessibles ; le fond de carte dépend des tuiles disponibles dans le cache du navigateur.</p>
+        <p>Vous pouvez installer Soundscape sur votre écran d’accueil. La carte interactive et l’enregistrement nécessitent JavaScript.</p>
+        <p><a href="/soundscape.md">Lire la présentation en Markdown</a></p>
+      </main>
+    </details>
 
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>

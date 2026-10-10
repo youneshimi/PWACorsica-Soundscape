@@ -1,6 +1,7 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { serviceWorkerPlugin } from './build/service-worker.js'
+import { seoPlugin } from './build/seo.js'
 
 const proxy = {
   '/api': { target: 'http://localhost:3001', changeOrigin: true },
@@ -9,7 +10,7 @@ const proxy = {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), serviceWorkerPlugin()],
+  plugins: [react(), seoPlugin(), serviceWorkerPlugin()],
   server: {
     proxy,
   },

@@ -18,6 +18,7 @@ test('le build précache ses bundles et change de version quand un fichier publi
     for (const [file, content] of [
       ['offline.html', '<html>Hors connexion</html>'],
       ['manifest.json', '{"name":"Soundscape"}'],
+      ['soundscape.md', '# Corsica Soundscape'],
       ['img/icon-192.png', '192'], ['img/icon-512.png', '512'], ['img/icon-maskable-512.png', 'maskable'],
     ]) {
       await writeFile(join(root, 'public', file), content);
@@ -33,13 +34,14 @@ test('le build précache ses bundles et change de version quand un fichier publi
     assert.ok(assets.some((asset) => /^\/assets\/.+\.js$/.test(asset)));
     assert.ok(assets.some((asset) => /^\/assets\/.+\.css$/.test(asset)));
     assert.ok(assets.includes('/img/icon-maskable-512.png'));
+    assert.ok(assets.includes('/soundscape.md'));
     for (const asset of assets) {
       await readFile(join(root, 'dist', asset === '/' ? 'index.html' : asset.slice(1)));
     }
     assert.match(first, /const CACHE_NAME = 'soundscape-[a-f0-9]{16}';/);
     assert.equal(await compile(), first, 'Deux builds identiques gardent la même version');
 
-    await writeFile(join(root, 'public', 'offline.html'), '<html>Une nouvelle page de secours</html>');
+    await writeFile(join(root, 'public', 'soundscape.md'), '# Une nouvelle présentation');
     const changed = await compile();
     assert.notEqual(changed.match(/const CACHE_NAME = '[^']+';/)[0], first.match(/const CACHE_NAME = '[^']+';/)[0]);
   } finally {
