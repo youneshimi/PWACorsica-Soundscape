@@ -58,6 +58,17 @@ Pour vérifier la bannière de mise à jour, gardez la preview ouverte, modifiez
 - Après Stop, écoutez le son et sauvegardez-le. Le formulaire se ferme après l’écriture locale ; l’envoi au serveur se poursuit en arrière-plan. En cas d’échec de l’écriture locale, le formulaire garde le son et affiche une erreur.
 - Sur téléphone, vérifiez l’enregistrement, la lecture et l’envoi : le format choisi dépend du navigateur (WebM, MP4 ou Ogg).
 
+### Vérifier l’installation mobile
+
+Une fois l’application déployée en HTTPS, ouvrez son URL sur un téléphone :
+
+- **Android / Chrome** : utilisez « Installer l’app » quand le navigateur propose l’installation, puis lancez Soundscape depuis l’écran d’accueil.
+- **iPhone / Safari** : ouvrez le menu de partage, choisissez « Sur l’écran d’accueil », activez « Ouvrir comme app web » si cette option est proposée, puis ajoutez l’app. Le [guide Apple](https://support.apple.com/fr-fr/guide/iphone/iphea86e5236/ios) détaille les étapes. Safari utilise ce menu, sans afficher le bouton d’installation personnalisé de Chrome.
+- Vérifiez l’icône, le nom « Soundscape », l’ouverture en mode autonome et l’absence du bouton d’installation dans ce mode. Fermez puis relancez l’app depuis son icône.
+- Dans DevTools → Application → Manifest, vérifiez les icônes 192 et 512, le mode `standalone`, la couleur verte `#3f604e` et le fond crème `#f6f3ed`.
+
+La détection utilise `display-mode: standalone` ainsi que `navigator.standalone` sur iOS. Le test sur un vrai téléphone reste à effectuer après le déploiement.
+
 ## Stack
 
 - **Frontend** : React 19 + Vite

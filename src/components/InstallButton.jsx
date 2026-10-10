@@ -1,19 +1,15 @@
-// ============================================================
-// Composant : Bouton d'installation PWA
-// ============================================================
-// Intercepte l'événement beforeinstallprompt pour proposer
-// l'installation au bon moment (après exploration de l'app).
-// ============================================================
-
 import { useState, useEffect } from 'react';
 import { Download } from 'lucide-react';
 import './InstallButton.css';
 
 export default function InstallButton() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [installed, setInstalled] = useState(false);
+  const [installed, setInstalled] = useState(() =>
+    window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true
+  );
 
   useEffect(() => {
+    const displayMode = window.matchMedia('(display-mode: standalone)');
     const handler = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -24,17 +20,21 @@ export default function InstallButton() {
       setDeferredPrompt(null);
     };
 
+    const displayModeHandler = () => {
+      if (displayMode.matches || window.navigator.standalone === true) installedHandler();
+    };
+
     window.addEventListener('beforeinstallprompt', handler);
     window.addEventListener('appinstalled', installedHandler);
 
-    // Vérifier si déjà en mode standalone
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      setInstalled(true);
-    }
+    if (displayMode.addEventListener) displayMode.addEventListener('change', displayModeHandler);
+    else displayMode.addListener(displayModeHandler);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handler);
       window.removeEventListener('appinstalled', installedHandler);
+      if (displayMode.removeEventListener) displayMode.removeEventListener('change', displayModeHandler);
+      else displayMode.removeListener(displayModeHandler);
     };
   }, []);
 
