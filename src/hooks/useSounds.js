@@ -47,12 +47,14 @@ export function useSounds() {
       createdAt: new Date().toISOString(),
       synced: false,
     });
-    await refreshLocal();
-    if (navigator.onLine) {
-      await flushOutbox();
-    } else {
-      await requestBackgroundSync();
+    // Une fois le son écrit en base, un problème d'affichage ou d'envoi ne doit pas inviter à le créer deux fois.
+    try {
+      await refreshLocal();
+    } catch (error) {
+      console.warn('[Sounds] Rafraîchissement différé:', error.message);
     }
+    if (navigator.onLine) flushOutbox().catch((error) => console.warn('[Sounds] Envoi différé:', error.message));
+    else requestBackgroundSync();
   }, [refreshLocal, flushOutbox]);
 
   useEffect(() => {

@@ -69,6 +69,21 @@ test('un envoi réussi remplace la copie locale et conserve le fichier audio', a
   assert.equal((await getOutbox()).length, 0);
 });
 
+test('la synchronisation conserve le format MP4 ou Ogg au lieu de le nommer WebM', async () => {
+  for (const [type, filename] of [['audio/mp4', 'recording.m4a'], ['audio/ogg;codecs=opus', 'recording.ogg']]) {
+    const audioBlob = new Blob(['sound'], { type });
+    await savePendingSound({ ...localSound, audioBlob });
+    globalThis.fetch = async (url, options) => {
+      const file = options.body.get('audio');
+      assert.equal(file.name, filename);
+      assert.equal(file.type, type);
+      return Response.json(serverSound);
+    };
+    await syncOutbox();
+    assert.equal((await getOutbox()).length, 0);
+  }
+});
+
 test('les échecs réseau et HTTP gardent le son et la demande d’envoi', async () => {
   await savePendingSound(localSound);
   globalThis.fetch = async () => { throw new Error('offline'); };
@@ -160,6 +175,20 @@ test('le Service Worker remplace également la copie locale après synchronisati
   assert.deepEqual((await getAllSounds()).map((sound) => sound.id), ['server-test']);
   assert.equal((await getOutbox()).length, 0);
   assert.equal(await (await getAllSounds())[0].audioBlob.text(), 'recording');
+});
+
+test('le Background Sync conserve également le format MP4 ou Ogg', async () => {
+  for (const [type, filename] of [['audio/mp4', 'recording.m4a'], ['audio/ogg;codecs=opus', 'recording.ogg']]) {
+    await savePendingSound({ ...localSound, audioBlob: new Blob(['sound'], { type }) });
+    const { context } = workerContext(async (url, options) => {
+      const file = options.body.get('audio');
+      assert.equal(file.name, filename);
+      assert.equal(file.type, type);
+      return Response.json(serverSound);
+    });
+    await context.syncOutbox();
+    assert.equal((await getOutbox()).length, 0);
+  }
 });
 
 test('l’événement sync rejette son attente en cas d’échec, pour permettre une relance', async () => {

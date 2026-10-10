@@ -27,13 +27,13 @@ after(async () => {
   }
 });
 
-function upload(key) {
+function upload(key, type = 'audio/webm', filename = 'recording.webm') {
   const data = new FormData();
   data.append('title', 'Test ' + key);
   data.append('latitude', '42.3');
   data.append('longitude', '9.15');
   data.append('category', 'mer');
-  data.append('audio', new Blob(['sound'], { type: 'audio/webm' }), 'recording.webm');
+  data.append('audio', new Blob(['sound'], { type }), filename);
   return fetch(baseUrl + '/api/sounds', {
     method: 'POST', headers: { 'Idempotency-Key': key }, body: data,
   });
@@ -65,4 +65,17 @@ test('deux enregistrements distincts restent distincts', async () => {
   const first = await (await upload('different-a')).json();
   const second = await (await upload('different-b')).json();
   assert.notEqual(first.id, second.id);
+});
+
+test('les enregistrements MP4 et Ogg gardent leur extension et leur type lors de la lecture', async () => {
+  for (const [type, filename] of [['audio/mp4', 'recording.m4a'], ['audio/ogg', 'recording.ogg']]) {
+    const response = await upload(type, type, filename);
+    assert.equal(response.status, 201);
+    const sound = await response.json();
+    assert.ok(sound.audioUrl.endsWith('.' + filename.split('.').pop()));
+    const audio = await fetch(baseUrl + sound.audioUrl);
+    assert.equal(audio.status, 200);
+    assert.ok(audio.headers.get('Content-Type').startsWith(type));
+    assert.equal(await audio.text(), 'sound');
+  }
 });

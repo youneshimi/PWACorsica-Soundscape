@@ -48,6 +48,16 @@ Le build ajoute automatiquement les fichiers JavaScript et CSS au précache. Le 
 
 Pour vérifier la bannière de mise à jour, gardez la preview ouverte, modifiez un fichier de l'interface et relancez `npm run build` dans un autre terminal. Rechargez la page en ligne : une nouvelle version doit être proposée. Le bouton de mise à jour active le nouveau worker et recharge l'application.
 
+### Vérifier l’enregistrement et les permissions
+
+- Ouvrez le formulaire : aucune permission ne doit être demandée avant un clic sur « Enregistrer » ou « Obtenir ma position ».
+- Refusez le micro : un message doit apparaître, et vous devez pouvoir fermer le formulaire.
+- Autorisez le micro puis fermez pendant l’enregistrement : l’indicateur du microphone doit disparaître. Vérifiez aussi la fermeture pendant une demande de permission.
+- Refusez la position : utilisez « Choisir le lieu », puis cliquez sur la petite carte ou saisissez la latitude et la longitude. La sauvegarde reste désactivée sans position valide.
+- En mode Offline, la saisie des coordonnées reste disponible même si le fond de carte ne charge pas.
+- Après Stop, écoutez le son et sauvegardez-le. Le formulaire se ferme après l’écriture locale ; l’envoi au serveur se poursuit en arrière-plan. En cas d’échec de l’écriture locale, le formulaire garde le son et affiche une erreur.
+- Sur téléphone, vérifiez l’enregistrement, la lecture et l’envoi : le format choisi dépend du navigateur (WebM, MP4 ou Ogg).
+
 ## Stack
 
 - **Frontend** : React 19 + Vite

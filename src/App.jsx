@@ -102,11 +102,12 @@ function App() {
       </button>
 
       {/* Modal d'enregistrement */}
-      <RecordModal
-        isOpen={showRecorder}
-        onClose={() => setShowRecorder(false)}
-        onSave={handleSaveSound}
-      />
+      {showRecorder && (
+        <RecordModal
+          onClose={() => setShowRecorder(false)}
+          onSave={handleSaveSound}
+        />
+      )}
 
       {/* Bannières */}
       <OfflineBanner isOnline={isOnline} outboxCount={outboxCount} />

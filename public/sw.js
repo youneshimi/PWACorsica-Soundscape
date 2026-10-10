@@ -245,7 +245,11 @@ async function sendOutbox() {
       data.append('latitude', entry.latitude);
       data.append('longitude', entry.longitude);
       data.append('category', entry.category || 'autre');
-      if (entry.audioBlob) data.append('audio', entry.audioBlob, 'recording.webm');
+      if (entry.audioBlob) {
+        const type = entry.audioBlob.type.split(';')[0].toLowerCase();
+        const extensions = { 'audio/webm': 'webm', 'audio/mp4': 'm4a', 'audio/ogg': 'ogg', 'audio/mpeg': 'mp3', 'audio/wav': 'wav', 'audio/aac': 'aac' };
+        data.append('audio', entry.audioBlob, 'recording.' + (extensions[type] || 'bin'));
+      }
 
       const response = await fetch('/api/sounds', {
         method: 'POST',

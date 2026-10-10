@@ -1,4 +1,5 @@
 import { getOutbox, completeSync } from './db.js';
+import { getAudioFileName } from './audio.js';
 
 let running;
 
@@ -14,7 +15,7 @@ async function sendEntries() {
       data.append('latitude', entry.latitude);
       data.append('longitude', entry.longitude);
       data.append('category', entry.category || 'autre');
-      if (entry.audioBlob) data.append('audio', entry.audioBlob, 'recording.webm');
+      if (entry.audioBlob) data.append('audio', entry.audioBlob, getAudioFileName(entry.audioBlob));
 
       const response = await fetch('/api/sounds', {
         method: 'POST',
