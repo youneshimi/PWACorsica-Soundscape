@@ -25,7 +25,14 @@ test('le build précache ses bundles et change de version quand un fichier publi
     }
 
     async function compile() {
-      await build({ root, configFile: false, logLevel: 'silent', plugins: [serviceWorkerPlugin()] });
+      const cloudflareFiles = {
+        name: 'cloudflare-files-test',
+        generateBundle() {
+          this.emitFile({ type: 'asset', fileName: 'wrangler.json', source: '{}' });
+          this.emitFile({ type: 'asset', fileName: '.assetsignore', source: 'wrangler.json' });
+        },
+      };
+      await build({ root, configFile: false, logLevel: 'silent', plugins: [cloudflareFiles, serviceWorkerPlugin()] });
       return readFile(join(root, 'dist', 'sw.js'), 'utf8');
     }
 
@@ -35,6 +42,8 @@ test('le build précache ses bundles et change de version quand un fichier publi
     assert.ok(assets.some((asset) => /^\/assets\/.+\.css$/.test(asset)));
     assert.ok(assets.includes('/img/icon-maskable-512.png'));
     assert.ok(assets.includes('/soundscape.md'));
+    assert.ok(!assets.includes('/wrangler.json'));
+    assert.ok(!assets.includes('/.assetsignore'));
     for (const asset of assets) {
       await readFile(join(root, 'dist', asset === '/' ? 'index.html' : asset.slice(1)));
     }

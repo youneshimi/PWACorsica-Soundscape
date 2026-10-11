@@ -1,0 +1,3 @@
+# Pour tester avec Wrangler en local : copier vers .dev.vars (ignoré par Git).
+# La vraie valeur reste dans .dev.vars ou dans les secrets du Worker Cloudflare.
+SUPABASE_SECRET_KEY=

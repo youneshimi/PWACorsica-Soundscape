@@ -73,7 +73,7 @@ La détection utilise `display-mode: standalone` ainsi que `navigator.standalone
 
 La présentation de l’accueil est dans le HTML initial, sous « À propos ». Elle reste lisible sans JavaScript. [public/soundscape.md](./public/soundscape.md) reprend ce contenu en Markdown ; gardez les deux versions cohérentes si vous changez le texte. Ce fichier est précaché, y compris lors de son ouverture depuis un lien hors connexion. Le HTML référence cette version avec `rel="alternate"`, et `llms.txt` la signale aussi.
 
-Le domaine public n’est pas encore connu. Copiez `.env.example` vers `.env.production.local` et renseignez `SITE_URL` avec l’adresse HTTPS réelle, sans sous-chemin. Vous pouvez aussi définir cette variable dans les paramètres de build de l’hébergeur. Puis relancez `npm run build`.
+Le site public est `https://pwacorsica-soundscape.ounesshimi.workers.dev`. Définissez `SITE_URL` avec cette adresse dans les paramètres de build Cloudflare. Pour reproduire ces URL en local, copiez `.env.example` vers `.env.production.local` et renseignez la même variable, puis relancez `npm run build`.
 
 Le build ajoute automatiquement la canonical, `og:url`, `og:image` (l’icône 512 existante) et l’URL du `WebApplication` JSON-LD dans `dist/index.html`. Il utilise le même domaine pour `dist/robots.txt`, `dist/sitemap.xml` et les liens de `dist/llms.txt`. Sans `SITE_URL`, ces URL restent absentes et le sitemap reste vide : aucune adresse de déploiement fictive n’est publiée. La configuration suppose que l’application est servie à la racine du domaine.
 
@@ -98,12 +98,17 @@ Après déploiement, refaites ces vérifications avec le domaine réel, configur
 - **Frontend** : React 19 + Vite
 - **Carte** : Leaflet / react-leaflet
 - **Stockage local** : IndexedDB (idb)
-- **Backend** : Express.js
+- **Backend public** : Cloudflare Worker + PostgreSQL et Storage Supabase
+- **Backend local** : Express.js avec JSON et fichiers sur disque
 - **Service Worker** : manuel (Cache First + Network First)
 
 ## Document technique
 
 Voir [DOC-TECHNIQUE.md](./DOC-TECHNIQUE.md)
+
+## Hébergement Cloudflare et Supabase
+
+Les étapes de création de la table, du bucket et du secret Cloudflare sont dans [DEPLOIEMENT.md](./DEPLOIEMENT.md). La connexion réelle et les tests sur téléphone restent à effectuer après cette configuration. Le document technique initial doit encore être actualisé avant le rendu.
 
 ## Licence
 

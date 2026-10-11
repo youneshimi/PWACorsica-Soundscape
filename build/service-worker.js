@@ -18,7 +18,10 @@ export function serviceWorkerPlugin() {
         '/', '/index.html', '/offline.html', '/manifest.json', '/soundscape.md',
         '/img/icon-192.png', '/img/icon-512.png', '/img/icon-maskable-512.png',
       ];
-      const files = Object.keys(bundle).filter((file) => !file.endsWith('.map')).sort();
+      // Les fichiers de configuration Cloudflare ne sont pas des ressources publiques.
+      const files = Object.keys(bundle)
+        .filter((file) => !file.endsWith('.map') && !['wrangler.json', '.assetsignore', '_headers', '_redirects'].includes(file))
+        .sort();
       const assets = [...new Set([...shell, ...files.map((file) => `/${file}`)])];
       const hash = createHash('sha256').update(source);
 
