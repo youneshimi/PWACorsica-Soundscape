@@ -1,5 +1,7 @@
 # Corsica Soundscape V2 — Document technique
 
+Ce document détaille l'ajout des notifications. [DOC-TECHNIQUE.md](./DOC-TECHNIQUE.md) est la référence globale pour l'application complète.
+
 **Branche** : `main`. **Version** : 2.0.0.
 
 **PWA** : https://pwacorsica-soundscape.ounesshimi.workers.dev/
