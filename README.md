@@ -108,7 +108,7 @@ Voir [DOC-TECHNIQUE.md](./DOC-TECHNIQUE.md)
 
 ## Hébergement Cloudflare et Supabase
 
-Les étapes de création de la table, du bucket et du secret Cloudflare sont dans [DEPLOIEMENT.md](./DEPLOIEMENT.md). La connexion réelle et les tests sur téléphone restent à effectuer après cette configuration. Le document technique initial doit encore être actualisé avant le rendu.
+Les étapes de création de la table, du bucket et du secret Cloudflare sont dans [DEPLOIEMENT.md](./DEPLOIEMENT.md). La connexion réelle et la synchronisation ont été vérifiées. [DOC-TECHNIQUE.md](./DOC-TECHNIQUE.md) décrit la version publiée et distingue les tests confirmés des validations restant à consigner.
 
 ## Licence
 

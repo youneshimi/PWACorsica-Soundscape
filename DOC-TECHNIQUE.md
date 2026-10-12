@@ -1,220 +1,91 @@
-# Corsica Soundscape — Document Technique
+# Corsica Soundscape — Document technique
 
-**Auteur** · M2 Informatique, Università di Corsica · Octobre 2026  
-**URL** · https://corsica-soundscape.vercel.app  
-**Dépôt** · https://github.com/xxx/corsica-soundscape  
-**Statut** · final
+**Projet** : carte sonore collaborative de la Corse — M2 Informatique, Università di Corsica.
 
----
+**PWA** : https://pwacorsica-soundscape.ounesshimi.workers.dev/
+
+**Dépôt** : https://github.com/youneshimi/PWACorsica-Soundscape
+
+**Statut au 12 octobre 2026** : application et API déployées ; enregistrement et synchronisation testés. Les références du téléphone de test et la démonstration de mise à jour restent à consigner.
 
 ## 1. TL;DR
 
-Corsica Soundscape est une carte sonore collaborative de la Corse. Les utilisateurs enregistrent des sons géolocalisés (mer, maquis, clochers, marchés) et les partagent sur une carte interactive. Le choix technique le plus important est l'architecture **offline-first avec outbox + Background Sync** : l'app fonctionne en mode avion, stocke les enregistrements localement, et les synchronise automatiquement au retour du réseau.
+La PWA permet d'enregistrer et d'écouter des sons placés sur une carte de la Corse. Elle sauvegarde d'abord les enregistrements dans IndexedDB, puis les envoie au serveur. Une file d'envoi et un identifiant stable permettent de reprendre une synchronisation interrompue sans créer de doublon.
 
 ## 2. Contexte et objectifs
 
-- **Problème** : la Corse possède un patrimoine sonore riche (polyphonies, nature, vie de village) qui n'est documenté nulle part de façon géolocalisée et collaborative. Cette PWA permet à quiconque de capturer et partager ces sons.
-- **Sujet Hub** : libre — « carte sonore collaborative » (manipulation de données utilisateur + contenu public visible).
-
-### Goals (v1)
-- Enregistrer un son avec le micro, le géolocaliser automatiquement, le catégoriser et le sauvegarder
-- Afficher les sons sur une carte Leaflet interactive avec filtrage par catégorie
-- Fonctionner hors connexion : enregistrement, écoute des sons en cache, synchronisation au retour du réseau
-- S'installer sur un téléphone comme une app native
-
-### Non-goals
-- Pas de compte utilisateur / authentification (v2)
-- Pas d'édition audio (couper, mixer) — on capture le son brut
-- Pas de streaming en temps réel
+Sujet libre : partager des ambiances de mer, de nature, de village ou de musique. L'utilisateur donne un titre, une description, une catégorie et une position à son enregistrement. La liste et la carte permettent de retrouver les sons. L'application est installable et reste utilisable après une première visite en ligne, même sans réseau. L'édition audio, les comptes et la modération ne sont pas inclus.
 
 ## 3. Architecture
 
-### Stack
-| Couche | Technologie | Pourquoi |
-|---|---|---|
-| Frontend | **React 19 + Vite** | DX rapide (HMR), écosystème riche, composants réutilisables |
-| Carte | **Leaflet + react-leaflet** | Libre, léger (40 ko), tuiles offline possibles |
-| Stockage local | **IndexedDB via `idb`** | Stocke des blobs audio (impossible en localStorage), API Promise |
-| Service Worker | **Manuel** (pas Workbox) | Compréhension fine des stratégies de cache, contrôle total |
-| Backend | **Express.js** | Simple, permet le bonus If-Match/412 pour les conflits |
-| Hébergement | **Vercel** (front) + **Render/Railway** (API) | HTTPS auto, déploiement Git push |
+React et Vite gèrent l'interface ; Leaflet affiche la carte. IndexedDB conserve les données locales. Le Service Worker est écrit directement, sans Workbox.
 
-### Arborescence
+Cloudflare sert `dist` et exécute `worker/index.js` pour l'API. Le Worker appelle PostgreSQL et Storage Supabase. Le navigateur utilise la même origine pour `GET`/`POST /api/sounds` et `GET`/`HEAD /uploads/<fichier>`. Express reste le backend de développement local.
 
-```
-Navigateur
-  ├── React App (SPA)
-  │     ├── SoundMap (Leaflet)
-  │     ├── SoundPanel (liste + player)
-  │     ├── RecordModal (MediaRecorder + Geolocation)
-  │     └── OfflineBanner / UpdateBanner / InstallButton
-  │
-  ├── Service Worker (sw.js)
-  │     ├── Cache "soundscape-v1" (App Shell)
-  │     ├── Stratégie Cache First (assets)
-  │     ├── Stratégie Network First (API)
-  │     └── Background Sync → flush outbox
-  │
-  └── IndexedDB "corsica-soundscape"
-        ├── Store "sounds" (données affichées)
-        └── Store "outbox" (actions en attente)
-
-            │ fetch /api/sounds
-            ▼
-  Serveur Express.js
-        ├── GET  /api/sounds
-        ├── POST /api/sounds (multipart)
-        ├── PUT  /api/sounds/:id (If-Match / 412)
-        └── /uploads/ (fichiers audio)
-```
-
-### Pipeline de déploiement
-1. `git push` → Vercel build automatique (front React)
-2. Le serveur Express est déployé sur Render/Railway (Git push aussi)
-3. Les variables d'environnement configurent l'URL de l'API
+Le push sur `main` déclenche le build Cloudflare (`npm run build`), puis `npx wrangler deploy`. `wrangler.jsonc` définit les routes et l'URL Supabase. `DEPLOIEMENT.md` décrit la création de la table, du bucket et du secret.
 
 ## 4. Cache et hors ligne
 
-| Ressource | Stratégie | Stockage | Pourquoi |
-|---|---|---|---|
-| HTML / CSS / JS | **Cache First** | Cache API (`soundscape-v1`) | Assets versionnés par Vite (hash dans le nom), chargement instantané |
-| Données API (`/api/sounds`) | **Network First** | Cache API (fallback) | On veut la donnée fraîche, mais le cache sert hors ligne |
-| Sons audio (blobs) | Stockage local | IndexedDB | Les blobs > 5 Mo ne tiennent pas en cache standard ; IDB gère |
-| Images carte (tuiles) | Cache First dynamique | Cache API | Les tuiles visitées sont mises en cache au fil de la navigation |
+| Ressource | Stratégie et stockage |
+|---|---|
+| Accueil, JS, CSS, icônes, page de secours | Précache, puis Cache First dans `soundscape-<hash>` |
+| Manifest et présentation Markdown | Cache puis actualisation en arrière-plan |
+| API | Network First, secours en cache après panne ou erreur serveur |
+| Audio téléchargé | Cache persistant `soundscape-data-v1`, lecture des plages HTTP Range |
+| Nouveaux enregistrements | Blob dans IndexedDB, disponible avant l'envoi |
 
-### Expérience hors ligne
-- **Ce qui marche** : l'app s'ouvre, la carte affiche les tuiles déjà visitées, la liste des sons locaux est visible, on peut écouter les sons en cache, on peut enregistrer un nouveau son (sauvé dans l'outbox)
-- **Ce qui est désactivé** : un badge ⏳ indique les sons en attente de sync, la bannière "Hors connexion" s'affiche en bas
-- **Page de secours** : `offline.html` — affichée si une navigation échoue sans cache (rare : App Shell pré-caché)
+L'accueil et `/?action=record` utilisent le même HTML précaché. Une navigation inconnue peut recevoir `offline.html`. Les tuiles OpenStreetMap utilisent uniquement le cache HTTP du navigateur : le fond de carte complet n'est pas garanti hors connexion. Aucun téléchargement groupé n'est effectué.
 
 ## 5. Mise à jour
 
-- **Stratégie** : nouvelle version **proposée à l'utilisateur** (bannière "Mettre à jour")
-- **Pourquoi pas d'office** : l'utilisateur peut être en train d'enregistrer un son. Un rechargement forcé perdrait l'enregistrement en cours. La bannière laisse le choix.
-- **Mécanisme** :
-  1. Le SW est versionné (`CACHE_NAME = 'soundscape-v1'`, v2, v3…)
-  2. Au `updatefound`, si un nouveau SW est `installed` et qu'il y a déjà un controller → on affiche `<UpdateBanner>`
-  3. Au clic "Mettre à jour" → `postMessage({ type: 'SKIP_WAITING' })` au SW en attente
-  4. Le SW appelle `self.skipWaiting()` → `controllerchange` → la page se recharge
+Le build calcule la version du cache à partir du Service Worker et des fichiers précachés. Un changement produit un nouveau `sw.js`. Après installation, le nouveau Worker attend ; la bannière propose « Plus tard » ou « Mettre à jour ».
+
+Le bouton envoie `SKIP_WAITING`. L'activation déclenche `controllerchange`, puis un rechargement. Le premier contrôle ne recharge pas la page. Les données et audios du cache persistant sont conservés. Cette stratégie laisse l'utilisateur terminer son enregistrement avant de changer de version.
 
 ## 6. Données et synchronisation
 
-### Modèle de données (IndexedDB)
+IndexedDB `corsica-soundscape`, version 1, contient `sounds` (clé `id`, index de catégorie, date et position) et `outbox` (clé auto-incrémentée). Les entrées associent métadonnées, Blob, `localId` et `clientId`.
 
-**Store `sounds`** :
-| Champ | Type | Index |
-|---|---|---|
-| `id` (keyPath) | string (UUID) | — |
-| `title` | string | — |
-| `description` | string | — |
-| `latitude` | number | `by-location` (compound) |
-| `longitude` | number | `by-location` (compound) |
-| `category` | string | `by-category` |
-| `audioBlob` | Blob | — |
-| `audioUrl` | string | — |
-| `createdAt` | string (ISO) | `by-date` |
-| `synced` | boolean | — |
+La sauvegarde écrit le son et sa demande d'envoi dans une transaction commune. Le formulaire attend cette écriture avant de fermer. L'envoi transmet le fichier en multipart et `clientId` dans `Idempotency-Key`. Après succès, une transaction remplace la copie locale par celle du serveur et retire la demande. Une erreur conserve la file.
 
-**Store `outbox`** :
-| Champ | Type |
-|---|---|
-| `id` (autoIncrement) | number |
-| `title`, `description`, `latitude`, `longitude`, `category` | mêmes que sounds |
-| `audioBlob` | Blob |
-| `createdAt` | string |
-| `status` | `'pending'` |
+Background Sync utilise le tag `sync-outbox` lorsqu'il est disponible. L'application relance aussi au démarrage, au retour du réseau, au focus et toutes les 30 secondes si une demande reste en attente. La contrainte unique Supabase sur `client_id` protège contre les envois concurrents et les réponses perdues.
 
-### Outbox pattern
-1. L'utilisateur enregistre un son → sauvé dans `sounds` (affichage immédiat) ET dans `outbox`
-2. Si **en ligne** → `fetch POST /api/sounds` immédiat → suppression de l'outbox
-3. Si **hors ligne** → reste dans l'outbox :
-   - **Chrome** : `registration.sync.register('sync-outbox')` → le SW reçoit l'événement `sync` au retour du réseau et flush l'outbox
-   - **Firefox/Safari** (pas de Background Sync) : fallback `window.addEventListener('online', flushOutbox)` → flush à la reconnexion
-4. **Échec** : l'entrée reste dans l'outbox, sera re-tentée au prochain sync/online
-
-### Conflits (bonus)
-- **Stratégie** : `If-Match` / `412 Precondition Failed`
-- Le serveur maintient un champ `version` (incrémenté à chaque PUT)
-- Le client envoie `If-Match: "<version>"` dans le PUT
-- Si la version serveur a changé → 412 avec la version courante → le client peut merger ou écraser
-- **Acceptable ici** : les sons sont rarement modifiés par deux personnes (l'auteur modifie son propre son)
+Il n'existe pas de réconciliation de modifications concurrentes dans l'interface. Le `PUT` avec `If-Match` d'Express n'est pas déployé sur Cloudflare et ne constitue pas un bonus démontré.
 
 ## 7. Permissions et capacités de l'appareil
 
-| Capacité / API | Déclenchée quand | Pourquoi à ce moment | Si refus |
-|---|---|---|---|
-| **Microphone** (MediaRecorder) | Clic sur "Enregistrer" dans la modal | L'utilisateur comprend qu'il a besoin du micro pour capturer un son | Message : "Autorisez le micro dans les paramètres". L'app reste fonctionnelle (écoute seule). |
-| **Géolocalisation** | Clic sur "Obtenir ma position" ou début d'enregistrement | L'utilisateur veut placer son son sur la carte | Message : "Position refusée, vous pouvez placer le son manuellement". Le son est placé aléatoirement en Corse. |
-| **Notifications** | Après le premier enregistrement réussi | L'utilisateur a prouvé son intérêt pour l'app | Les notifications sont désactivées. Aucune dégradation fonctionnelle. |
+Le microphone est demandé au clic sur « Enregistrer ». Un refus affiche un message ; la lecture reste accessible. Le format dépend du navigateur : WebM, MP4 ou Ogg notamment. Le type réel est conservé lors de l'envoi. La fermeture arrête les pistes du micro, y compris après une autorisation reçue tardivement.
+
+Le GPS est demandé au clic sur « Obtenir ma position ». En cas de refus, l'utilisateur choisit le lieu sur une petite carte ou saisit les coordonnées. Aucun placement aléatoire n'est utilisé. La sauvegarde exige une position valide.
 
 ## 8. Notifications
 
-- **Type** : notifications **locales** (depuis le Service Worker)
-- **Moment de la demande** : après la première action réussie (enregistrement), pas au chargement
-- **Contenu** :
-  - Confirmation de synchronisation : "Son synchronisé ! — Vagues à Palombaggia a été envoyé."
-  - Nouveau son dans la zone (si l'API push est activée en v2)
-- **Au clic** : ouvre l'app / focus sur la fenêtre existante
-- Push notifications via Firebase : prévu pour la v2 (nécessite un compte utilisateur)
+Aucune demande de permission ni notification push n'est branchée dans le parcours utilisateur. L'état de synchronisation est affiché dans l'interface. Le gestionnaire `notificationclick` du Service Worker ne suffit pas à fournir une fonctionnalité push.
 
 ## 9. Visibilité : SEO et agents IA
 
-### Dans le HTML initial
-- `<title>` et `<meta description>` descriptifs
-- Contenu `<noscript>` : titre, description, liste de sons populaires (les crawlers voient du contenu sans JS)
-- Open Graph (`og:title`, `og:description`, `og:type`, `og:locale`)
-- JSON-LD `WebApplication` avec `contentLocation` (Corse, coordonnées GPS)
+La présentation « À propos » est dans le HTML initial, hors de React, et reste lisible sans JavaScript. `soundscape.md` reprend ce contenu et est précaché. Le HTML référence cette version et `llms.txt` la signale.
 
-### Pas dans le HTML initial
-- Les sons dynamiques (chargés via API) → parce que c'est du contenu généré par les utilisateurs, pas du contenu éditorial. Le SSR serait la solution pour la v2.
-
-### Fichiers de découverte
-
-| Fichier | Décision | Raison |
-|---|---|---|
-| `robots.txt` | `Allow: /` pour tous, `Disallow: /api/` et `/uploads/` | Le contenu public est la page, pas l'API brute ni les fichiers audio |
-| `sitemap.xml` | 1 URL (la page d'accueil) | SPA mono-page, pas de routes multiples |
-| `llms.txt` | Présent : description, fonctionnalités, stack, API | Permet aux agents IA de comprendre le projet |
-| `robots.txt` crawlers IA | `GPTBot Allow`, `ClaudeBot Allow`, `Google-Extended Allow` | Contenu éducatif, pas de raison de bloquer |
+`SITE_URL` configure au build la canonical, `og:url`, `og:image`, le JSON-LD et les URL de `robots.txt`, `sitemap.xml` et `llms.txt`. Le sitemap contient l'accueil. Les sons chargés depuis l'API ne sont pas rendus dans le HTML initial. Le Markdown est servi en `text/markdown` avec `X-Robots-Tag: noindex`.
 
 ## 10. Sécurité et vie privée
 
-- **Données sur l'appareil** : sons audio (blobs), métadonnées (titre, position, catégorie) dans IndexedDB. Pas de données personnelles sensibles.
-- **Ce qui part au serveur** : fichier audio + métadonnées (titre, description, position, catégorie). Pas de nom, pas d'email, pas de cookie de tracking.
-- **Secrets** : aucun côté client. Pas de clé API exposée. Les tuiles Leaflet sont publiques (CARTO/OSM).
-- **En-têtes de sécurité** : à configurer sur le CDN de déploiement (Vercel headers) :
-  - `Content-Security-Policy` : restreindre aux sources connues
-  - `X-Content-Type-Options: nosniff`
-  - `X-Frame-Options: DENY`
-  - `Referrer-Policy: strict-origin-when-cross-origin`
+HTTPS protège les échanges. Le micro et le GPS nécessitent une action volontaire. Audio, description et coordonnées peuvent contenir des informations personnelles ; les sons envoyés sont accessibles aux visiteurs.
 
-## 11. Mesures
+Le secret Supabase reste dans le Worker. La table utilise RLS et le bucket est privé ; les accès passent par l'API. Les envois sont limités à 10 Mo et les métadonnées sont validées. Sans compte, modération ni limitation par utilisateur, les contributions peuvent consommer les quotas gratuits.
 
-- **Lighthouse PWA** : objectif score > 90 sur les 4 catégories
-- **Core Web Vitals** :
-  - LCP < 2.5s (carte Leaflet chargée)
-  - FID < 100ms (pas de JS lourd bloquant)
-  - CLS < 0.1 (layout stable, hauteur carte fixée en CSS)
-- **Vérifications curl** :
-  - `curl -s https://corsica-soundscape.vercel.app/ | grep "<title>"` → titre présent
-  - `curl -s https://corsica-soundscape.vercel.app/robots.txt` → robots.txt répond
-  - `curl -s https://corsica-soundscape.vercel.app/sitemap.xml` → sitemap répond
-  - `curl -s https://corsica-soundscape.vercel.app/llms.txt` → llms.txt répond
-- **Lighthouse SEO** : objectif > 90
+## 11. Mesures et vérifications
+
+- Préparation locale de l'API : 63 tests réussis, lint et build réussis ; préparation Wrangler validée sans publication.
+- Vérification publique : l'API retourne « Vagues douces Ajaccio » et « Forêt de vizzavona », avec leur URL audio et `synced: true`.
+- Test hors connexion : « Sempre QUI » apparaît avec « Non synchronisé » et « 1 en attente ». L'auteur a confirmé la lecture et l'envoi au retour du réseau.
+- Installation visible sur ordinateur dans la capture de l'application autonome. Modèle de téléphone, navigateur, tests de refus et application d'une nouvelle version : résultats détaillés à consigner.
+- Aucun score Lighthouse ou chiffre de performance n'est annoncé sans rapport.
 
 ## 12. Limites connues et suite
 
-### Limites v1
-- **iOS Safari** : Background Sync non supporté → fallback `online` event fonctionne, mais pas garanti si l'app est tuée par l'OS
-- **iOS Safari** : `beforeinstallprompt` non supporté → l'utilisateur doit ajouter manuellement via "Ajouter à l'écran d'accueil"
-- **Pas de SSR** : les sons dynamiques ne sont pas dans le HTML initial (SEO limité au contenu statique noscript)
-- **Pas d'authentification** : n'importe qui peut poster un son (modération manuelle en v2)
-- **Taille des fichiers audio** : limitée à 10 Mo par le serveur (suffisant pour ~3 min en WebM/Opus)
+Le stockage local dépend de l'espace et de la conservation des données par le navigateur. La synchronisation en arrière-plan dépend du support disponible ; garder l'application ouverte permet les relances de secours. Sur iPhone, l'installation se fait depuis le partage Safari.
 
-### v2
-- Comptes utilisateurs (OAuth Google / GitHub)
-- Push notifications via Firebase (nouveaux sons dans votre zone)
-- SSR (Next.js) pour le SEO des sons individuels
-- Modération communautaire (signalement, vote)
-- Tuiles carte hors ligne pré-cachées pour la Corse
-- Édition audio basique (couper début/fin)
+Les offres gratuites ont des quotas. Une interruption au résultat inconnu peut laisser un fichier non référencé dans Storage ; aucun nettoyage différé automatique n'est prévu. Les sons d'Express ne sont pas importés automatiquement.
+
+Les prochaines améliorations seraient la modération, la limitation des envois, les comptes et l'édition audio. Les deux capacités proposées pour le bonus sont le microphone et la géolocalisation.
