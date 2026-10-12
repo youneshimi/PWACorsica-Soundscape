@@ -32,6 +32,8 @@ Le micro et le GPS restent demandés après les clics correspondants ; le lieu p
 
 Le navigateur fournit l'endpoint et les clés de chiffrement. `/api/push/subscribe` inscrit ces données dans une table privée, avec une empreinte du jeton local de gestion. La désactivation retire la ligne et l'abonnement navigateur.
 
+« Tester une notification » utilise `/api/push/test` et cible uniquement l'abonnement protégé par le jeton de cet appareil. Le résultat distingue un envoi accepté, un abonnement absent ou expiré et un refus du fournisseur. La configuration vérifie désormais la correspondance des clés VAPID ; les logs Cloudflare sont activés explicitement et indiquent les statuts HTTP sans données d'abonnement.
+
 Le serveur utilise `@block65/webcrypto-web-push` : VAPID et `aes128gcm`. `waitUntil` prolonge l'envoi après la sauvegarde. Seuls les services push connus sont acceptés, les redirections sont refusées et les abonnements expirés sont retirés. Le Service Worker affiche la notification et ouvre ou retrouve le son au clic. La lecture audio reste une action de l'utilisateur.
 
 ## 6. Visibilité et sécurité
@@ -42,7 +44,7 @@ Les clés privées Supabase et VAPID restent dans les secrets Cloudflare. La cl�
 
 ## 7. Validation
 
-Les tests couvrent la sauvegarde, le hors connexion, la reprise sans doublon, la conservation d'un son publié avant la mise à jour, les abonnements, la signature VAPID et le déchiffrement par un destinataire simulé, la réception et le clic dans le Service Worker. Le build et la préparation Wrangler sont vérifiés localement. Le linter natif est bloqué par la politique Windows.
+78 tests couvrent la sauvegarde, le hors connexion, la reprise sans doublon, la conservation d'un son publié avant la mise à jour, les abonnements, la signature VAPID et le déchiffrement par un destinataire simulé, la réception et le clic dans le Service Worker, les clés incohérentes et le test limité à son appareil. Le chiffrement et la validation VAPID ont aussi été vérifiés dans le moteur Cloudflare local avec un destinataire fictif. Le build et la préparation Wrangler sont vérifiés localement. Le linter natif est bloqué par la politique Windows.
 
 Le bouton a aussi été vérifié dans Chrome avec un serveur d'abonnement simulé : activation, désactivation, refus et absence d'abonnement au chargement. Ces contrôles ne remplacent pas une réception réelle sur téléphone. Compléter la date, les appareils, navigateurs et résultats après le parcours de [V2-NOTIFICATIONS.md](./V2-NOTIFICATIONS.md). Le bonus push reste à démontrer sur le site déployé.
 

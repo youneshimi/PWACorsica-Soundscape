@@ -18,7 +18,21 @@ async function saveSubscription(subscription, token, method, fetcher) {
   const response = await fetcher('/api/push/subscribe', {
     method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(10000),
   });
-  if (!response.ok) throw new Error(method === 'DELETE' ? 'La désactivation a échoué. Réessayez en ligne.' : 'L’inscription a échoué. Réessayez en ligne.');
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error || (method === 'DELETE' ? 'La désactivation a échoué. Réessayez en ligne.' : 'L’inscription a échoué. Réessayez en ligne.'));
+  }
+}
+
+export async function testPush(subscription, { storage = localStorage, fetcher = fetch } = {}) {
+  const token = storage.getItem(TOKEN_KEY);
+  if (!token) throw new Error('Désactivez puis réactivez les notifications sur cet appareil.');
+  const response = await fetcher('/api/push/test', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ endpoint: subscription.endpoint, token }), signal: AbortSignal.timeout(15000),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || 'La notification de test n’a pas pu être envoyée.');
 }
 
 // Le Worker et la clé sont chargés avant le clic, pour conserver le geste utilisateur.

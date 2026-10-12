@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createVapidKeys } from '../scripts/generate-vapid.js';
 import { handleRequest } from '../worker/index.js';
-import { notifyNewSound, validEndpoint } from '../worker/push.js';
-import { disablePush, enablePush, pushActive } from '../src/utils/push.js';
+import { notifyNewSound, validEndpoint, vapidKeysValid } from '../worker/push.js';
+import { disablePush, enablePush, pushActive, testPush } from '../src/utils/push.js';
 
 const origin = 'https://soundscape.test';
 const token = 'a'.repeat(64);
@@ -26,11 +26,11 @@ function provider() {
   const sounds = [];
   const calls = [];
   const deliveries = [];
-  const state = { pushTableDown: false };
+  const state = { pushTableDown: false, pushStatus: 201 };
   async function fetcher(input, options) {
     const url = new URL(input);
     calls.push({ url, options });
-    if (url.host !== 'example.supabase.co') { deliveries.push({ url, options }); return new Response(null, { status: 201 }); }
+    if (url.host !== 'example.supabase.co') { deliveries.push({ url, options }); return new Response(null, { status: state.pushStatus }); }
     if (url.pathname === '/rest/v1/rpc/register_push_subscription_v2') {
       const data = JSON.parse(options.body);
       const existing = rows.get(data.p_endpoint);
@@ -46,7 +46,9 @@ function provider() {
         if (!hash || rows.get(endpoint)?.token_hash === hash) rows.delete(endpoint);
         return new Response(null, { status: 204 });
       }
-      return Response.json([...rows.values()]);
+      const endpoint = url.searchParams.get('endpoint')?.slice(3);
+      const hash = url.searchParams.get('token_hash')?.slice(3);
+      return Response.json([...rows.values()].filter((row) => (!endpoint || row.endpoint === endpoint) && (!hash || row.token_hash === hash)));
     }
     if (url.pathname === '/rest/v1/sounds') {
       if (options.method !== 'POST') {
@@ -88,6 +90,63 @@ test('la configuration push publique ne révèle aucune clé privée', async () 
   assert.ok(!JSON.stringify(data).includes(env.VAPID_PRIVATE_KEY));
   assert.ok(!JSON.stringify(data).includes(env.SUPABASE_SECRET_KEY));
   assert.deepEqual(await (await handleRequest(new Request(`${origin}/api/push/config`), {})).json(), { enabled: false, publicKey: null });
+});
+
+test('deux clés VAPID de paires différentes ne sont pas annoncées comme opérationnelles', async () => {
+  const env = await configuration();
+  assert.equal(await vapidKeysValid(env), true);
+  const other = await configuration();
+  const mixed = { ...env, VAPID_PRIVATE_KEY: other.VAPID_PRIVATE_KEY };
+  assert.equal(await vapidKeysValid(mixed), false);
+  const data = await (await handleRequest(new Request(`${origin}/api/push/config`), mixed)).json();
+  assert.equal(data.enabled, false);
+  assert.match(data.error, /ne correspondent pas/);
+  assert.ok(!JSON.stringify(data).includes(mixed.VAPID_PRIVATE_KEY));
+  assert.equal(await vapidKeysValid(env), true);
+});
+
+function testRequest(endpoint, value = token, headers = {}) {
+  return new Request(`${origin}/api/push/test`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify({ endpoint, token: value }) });
+}
+
+test('la notification de test exige le jeton du même appareil et ne cible que son abonnement', async () => {
+  const env = await configuration();
+  const p = provider();
+  const first = await subscriber('https://fcm.googleapis.com/wp/first');
+  const second = await subscriber('https://web.push.apple.com/second');
+  await handleRequest(request({ subscription: first.subscription, token }), env, p.fetcher);
+  await handleRequest(request({ subscription: second.subscription, token: 'b'.repeat(64) }), env, p.fetcher);
+  assert.equal((await handleRequest(testRequest(first.subscription.endpoint, 'b'.repeat(64)), env, p.fetcher)).status, 404);
+  assert.equal((await handleRequest(testRequest(first.subscription.endpoint, token, { Origin: 'https://other.test' }), env, p.fetcher)).status, 403);
+  assert.equal(p.deliveries.length, 0);
+  assert.equal((await handleRequest(testRequest(first.subscription.endpoint), env, p.fetcher)).status, 200);
+  assert.equal(p.deliveries.length, 1);
+  assert.equal(p.deliveries[0].url.href, first.subscription.endpoint);
+  assert.equal(new Headers(p.deliveries[0].options.headers).get('urgency'), 'high');
+  assert.equal(p.rows.size, 2);
+});
+
+test('le test signale un refus VAPID ou un abonnement expiré et la désactivation fonctionne même sans clés', async () => {
+  const env = await configuration();
+  const p = provider();
+  const { subscription } = await subscriber();
+  await handleRequest(request({ subscription, token }), env, p.fetcher);
+  p.state.pushStatus = 403;
+  const refused = await handleRequest(testRequest(subscription.endpoint), env, p.fetcher);
+  const data = await refused.json();
+  assert.equal(refused.status, 502);
+  assert.equal(data.providerStatus, 403);
+  assert.match(data.error, /autorisation du serveur/);
+  assert.equal(p.rows.size, 1);
+  assert.ok(!JSON.stringify(data).includes(subscription.endpoint));
+  p.state.pushStatus = 410;
+  const expired = await (await handleRequest(testRequest(subscription.endpoint), env, p.fetcher)).json();
+  assert.match(expired.error, /expiré/);
+  assert.equal(p.rows.size, 0);
+  await handleRequest(request({ subscription, token }), env, p.fetcher);
+  const unconfigured = { ...env, VAPID_PRIVATE_KEY: '' };
+  assert.equal((await handleRequest(request({ endpoint: subscription.endpoint, token }, 'DELETE'), unconfigured, p.fetcher)).status, 200);
+  assert.equal(p.rows.size, 0);
 });
 
 test('l’inscription est idempotente et la désinscription exige le même jeton', async () => {
@@ -241,6 +300,28 @@ test('le clic inscrit le navigateur et la désactivation retire le serveur et le
   assert.equal(calls[1].body.token, calls[0].body.token);
   assert.equal(unsubscribed, true);
   assert.equal(pushActive(storage), false);
+});
+
+test('le bouton de test transmet uniquement son endpoint et son jeton, et affiche les erreurs du serveur', async () => {
+  const env = await configuration();
+  const storage = localStore();
+  const receiver = await subscriber();
+  let calls = 0;
+  const subscription = { ...receiver.subscription, toJSON: () => receiver.subscription, unsubscribe: async () => true };
+  await enablePush({ pushManager: { subscribe: async () => subscription } }, env.VAPID_PUBLIC_KEY, null, { storage, fetcher: async () => Response.json({ ok: true }) });
+  await testPush(subscription, { storage, fetcher: async (path, options) => {
+    calls++;
+    assert.equal(path, '/api/push/test');
+    assert.equal(options.method, 'POST');
+    const body = JSON.parse(options.body);
+    assert.equal(body.endpoint, subscription.endpoint);
+    assert.match(body.token, /^[a-f0-9]{64}$/);
+    assert.equal(body.subscription, undefined);
+    return Response.json({ ok: true });
+  } });
+  assert.equal(calls, 1);
+  await assert.rejects(testPush(subscription, { storage, fetcher: async () => Response.json({ error: 'Cet abonnement a expiré.' }, { status: 502 }) }), /a expiré/);
+  await assert.rejects(testPush(subscription, { storage: localStore(), fetcher: async () => { throw new Error('not called'); } }), /réactivez/);
 });
 
 test('un refus de permission n’envoie rien et une inscription échouée annule le nouvel abonnement', async () => {

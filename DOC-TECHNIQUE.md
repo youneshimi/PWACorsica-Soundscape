@@ -62,6 +62,8 @@ Le GPS est demandé au clic sur « Obtenir ma position ». En cas de refus, l'ut
 
 La V2 propose « Recevoir les nouveaux sons ». La permission est demandée après ce clic. Le navigateur crée un abonnement ; `/api/push/subscribe` l'inscrit dans la table privée `push_subscriptions_v2`, avec une empreinte du jeton local de gestion. Le bouton permet aussi de se désabonner.
 
+« Tester une notification » envoie un vrai message uniquement à l'appareil abonné et protégé par son jeton. Le serveur vérifie la correspondance des clés VAPID et signale les abonnements absents, expirés ou les refus du fournisseur. Les logs Cloudflare sont activés explicitement ; ils n'affichent ni clés ni données d'abonnement.
+
 Après une nouvelle insertion de son, le Worker chiffre et signe le message avec Web Push et VAPID, puis l'envoie via `waitUntil`. Les relances idempotentes ne renvoient pas le push. Le Service Worker affiche la notification et retrouve le son au clic. Les secrets privés restent dans Cloudflare. La configuration `/api/push/config` est servie sans cache.
 
 Le SQL ajoute uniquement les ressources d'abonnement ; les sons existants sont conservés. Cette démo accepte 20 abonnés et n'a pas de file persistante de reprise des notifications. Un échec du push ne fait pas échouer la sauvegarde. La réception réelle reste à vérifier selon [V2-NOTIFICATIONS.md](./V2-NOTIFICATIONS.md) ; [DOC-TECHNIQUE-V2.md](./DOC-TECHNIQUE-V2.md) décrit l'ajout.

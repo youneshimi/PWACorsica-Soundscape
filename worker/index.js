@@ -195,7 +195,7 @@ export async function handleRequest(request, env, fetcher = fetch, context) {
   try {
     if (url.pathname.startsWith('/api/push/')) {
       const storage = url.pathname === '/api/push/config' ? null : createStorage(env, fetcher);
-      return await handlePush(request, env, storage);
+      return await handlePush(request, env, storage, fetcher);
     }
     if (isApi && url.pathname !== '/api/sounds') throw new ApiError(404, 'Route API inconnue.');
     const storage = createStorage(env, fetcher);

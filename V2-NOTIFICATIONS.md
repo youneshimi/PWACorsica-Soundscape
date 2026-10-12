@@ -64,7 +64,7 @@ Ouvrir ces adresses dans de nouveaux onglets :
 - https://pwacorsica-soundscape.ounesshimi.workers.dev/api/sounds : les sons existants doivent toujours être présents.
 - https://pwacorsica-soundscape.ounesshimi.workers.dev/api/push/config : doit retourner `"enabled":true` et une clé publique, jamais la clé privée.
 
-`enabled:true` vérifie la présence et le format de la configuration ; l'inscription et la réception confirment ensuite que les valeurs fonctionnent ensemble.
+`enabled:true` vérifie la présence des réglages et que la clé privée VAPID correspond à la clé publique, par signature et vérification locales. L'inscription et la réception confirment ensuite que le service push et l'appareil fonctionnent ensemble. Une paire incohérente retourne `enabled:false` avec une explication, sans exposer la clé privée.
 
 Si la configuration retourne `enabled:false`, vérifier les noms exacts des deux clés VAPID, leur type et le secret Supabase dans le bon Worker. Une réponse 404 signale généralement que le nouveau code n'est pas encore déployé.
 
@@ -90,10 +90,13 @@ Le bouton **Push** de DevTools simule une réception locale : il sert à vérifi
 
 ## Si aucune notification n'arrive
 
+- Après déploiement de l'ajout du test, recharger et accepter la mise à jour. Sur l'appareil déjà abonné, cliquer **Tester une notification**. Ce bouton envoie réellement un message serveur à cet appareil uniquement, après vérification de son jeton.
+- Un message de succès signifie que le fournisseur a accepté l'envoi. Vérifier ensuite le centre de notifications et les réglages du système. Un abonnement absent ou expiré demande de désactiver puis réactiver les notifications. Un refus 401/403 demande de vérifier les clés et, si elles ont changé, de se réabonner.
 - Vérifier `enabled:true`, le bouton activé et la présence de l'abonnement dans Supabase.
 - Vérifier les autorisations de notification du navigateur et du système, ainsi que le mode « Ne pas déranger ».
 - Vérifier que B a publié un nouveau son, visible dans `/api/sounds` après synchronisation.
 - Dans les logs du Worker, chercher `[Push V2]` : `sent` compte les envois acceptés par le fournisseur, `expired` les abonnements retirés, `failed` les échecs. Un envoi accepté ne garantit pas l'affichage immédiat sur l'appareil.
+- Ouvrir **Workers & Pages → pwacorsica-soundscape → Observability**, sélectionner une période récente et refaire le test. Le fichier Wrangler active explicitement la conservation des logs. Les nouveaux messages donnent le statut HTTP du fournisseur ou l'étape de l'échec, sans afficher les endpoints, jetons ou clés. Les événements antérieurs ne sont pas recréés. Voir [Workers Logs](https://developers.cloudflare.com/workers/observability/logs/workers-logs/).
 - Après correction d'une paire VAPID erronée, se désabonner puis se réabonner avec les nouvelles clés.
 
 ## Tester en local
@@ -113,6 +116,8 @@ Pour React, garder le Worker local lancé et utiliser `npm run dev` sur `http://
 ## Fonctionnement et limites
 
 Les abonnements sont privés, protégés par un jeton local dont seule l'empreinte est conservée en base, et limités à 20 appareils. Le Worker chiffre en `aes128gcm`, signe avec VAPID et utilise `waitUntil`. Il refuse les endpoints arbitraires et les redirections ; les abonnements expirés (404/410) sont retirés. Un échec temporaire garde l'abonnement.
+
+`POST /api/push/test` filtre l'abonnement par endpoint et empreinte du jeton avant l'envoi. Il ne permet pas de tester les abonnements d'autres appareils. La désactivation reste disponible même si les clés VAPID doivent être corrigées.
 
 La sauvegarde du son reste réussie si le push échoue. Il n'existe pas de file serveur persistante ni de relance automatique des notifications. La livraison dépend du fournisseur, du navigateur et du système. Une réponse perdue après insertion peut empêcher le push sans perdre le son.
 
