@@ -71,6 +71,18 @@ Une fois l’application déployée en HTTPS, ouvrez son URL sur un téléphone 
 
 La détection utilise `display-mode: standalone` ainsi que `navigator.standalone` sur iOS. Le test sur un vrai téléphone reste à effectuer après le déploiement.
 
+### Icônes et favicon
+
+Les images sources sont dans `image/`. `Pic3.png` sert aux icônes 192 et 512 et au favicon ; `Pic2.png` fournit l'icône iPhone de 180 pixels ; `Pic1.png` conserve une marge pour l'icône `maskable` sur Android. Les exports iPhone et Android ont un fond vert opaque. Le favicon ICO contient les tailles 16, 32 et 48.
+
+Pour refaire les exports après modification des images :
+
+```powershell
+npm.cmd run icons
+```
+
+Les fichiers exportés dans `public/` sont versionnés et précachés. Le build Cloudflare utilise ces fichiers directement. `index.html` référence le favicon et l'icône Apple ; le manifest référence les icônes de la PWA. Les notifications utilisent également la nouvelle icône 192.
+
 ### Vérifier le contenu public et le SEO
 
 La présentation de l’accueil est dans le HTML initial, sous « À propos ». Elle est ouverte par défaut, avec et sans JavaScript, et peut être repliée pour explorer la carte. [public/soundscape.md](./public/soundscape.md) reprend ce contenu en Markdown ; gardez les deux versions cohérentes si vous changez le texte. Ce fichier est précaché, y compris lors de son ouverture depuis un lien hors connexion. Le HTML référence cette version avec `rel="alternate"`, et `llms.txt` la signale aussi.

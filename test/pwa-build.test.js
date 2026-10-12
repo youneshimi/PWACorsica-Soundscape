@@ -20,6 +20,7 @@ test('le build précache ses bundles et change de version quand un fichier publi
       ['manifest.json', '{"name":"Soundscape"}'],
       ['soundscape.md', '# Corsica Soundscape'],
       ['img/icon-192.png', '192'], ['img/icon-512.png', '512'], ['img/icon-maskable-512.png', 'maskable'],
+      ['img/apple-touch-icon.png', '180'], ['img/favicon-16.png', '16'], ['img/favicon-32.png', '32'], ['favicon.ico', 'ico'],
     ]) {
       await writeFile(join(root, 'public', file), content);
     }
@@ -41,6 +42,8 @@ test('le build précache ses bundles et change de version quand un fichier publi
     assert.ok(assets.some((asset) => /^\/assets\/.+\.js$/.test(asset)));
     assert.ok(assets.some((asset) => /^\/assets\/.+\.css$/.test(asset)));
     assert.ok(assets.includes('/img/icon-maskable-512.png'));
+    assert.ok(assets.includes('/img/apple-touch-icon.png'));
+    assert.ok(assets.includes('/favicon.ico'));
     assert.ok(assets.includes('/soundscape.md'));
     assert.ok(!assets.includes('/wrangler.json'));
     assert.ok(!assets.includes('/.assetsignore'));

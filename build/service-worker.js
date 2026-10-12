@@ -17,6 +17,7 @@ export function serviceWorkerPlugin() {
       const shell = [
         '/', '/index.html', '/offline.html', '/manifest.json', '/soundscape.md',
         '/img/icon-192.png', '/img/icon-512.png', '/img/icon-maskable-512.png',
+        '/img/apple-touch-icon.png', '/img/favicon-16.png', '/img/favicon-32.png', '/favicon.ico',
       ];
       // Les fichiers de configuration Cloudflare ne sont pas des ressources publiques.
       const files = Object.keys(bundle)

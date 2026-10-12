@@ -10,6 +10,10 @@ const CACHE_ASSETS = [
   '/img/icon-192.png',
   '/img/icon-512.png',
   '/img/icon-maskable-512.png',
+  '/img/apple-touch-icon.png',
+  '/img/favicon-16.png',
+  '/img/favicon-32.png',
+  '/favicon.ico',
 ];
 
 self.addEventListener('install', (event) => {
