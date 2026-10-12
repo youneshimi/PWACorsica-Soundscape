@@ -194,7 +194,7 @@ test('le serveur signe VAPID et chiffre un message déchiffrable par son destina
   const storage = { call: async () => Response.json([{ endpoint: receiver.subscription.endpoint, ...receiver.subscription.keys }]) };
   const stats = await notifyNewSound(storage, env, { id: 'sound-1', title: 'Forêt' }, async (url, options) => { sent = { url, options }; return new Response(null, { status: 201 }); });
   assert.deepEqual(stats, { sent: 1, expired: 0, failed: 0 });
-  assert.equal(sent.options.redirect, 'error');
+  assert.equal(sent.options.redirect, 'manual');
   const headers = new Headers(sent.options.headers);
   assert.equal(headers.get('content-encoding'), 'aes128gcm');
   const jwt = headers.get('authorization').match(/^vapid t=([^,]+)/)[1];
@@ -241,6 +241,24 @@ test('un abonnement expiré est retiré et un échec temporaire ne bloque pas le
   assert.deepEqual(stats, { sent: 1, expired: 1, failed: 2 });
   assert.equal(removed.length, 1);
   assert.equal(requested.length, 3);
+});
+
+test('une redirection du fournisseur est refusée sans envoyer les données à une autre adresse', async () => {
+  const env = await configuration();
+  const receiver = await subscriber();
+  let requests = 0;
+  const storage = { call: async (_, options = {}) => {
+    assert.notEqual(options.method, 'DELETE');
+    return Response.json([{ endpoint: receiver.subscription.endpoint, ...receiver.subscription.keys }]);
+  } };
+  const result = await notifyNewSound(storage, env, { id: 'one', title: 'Mer' }, async (url, options) => {
+    requests++;
+    assert.equal(url, receiver.subscription.endpoint);
+    assert.equal(options.redirect, 'manual');
+    return new Response(null, { status: 302, headers: { Location: 'https://another.test/private' } });
+  });
+  assert.equal(requests, 1);
+  assert.deepEqual(result, { sent: 0, expired: 0, failed: 1 });
 });
 
 test('un son V2 déclenche le push en arrière-plan une seule fois et sa sauvegarde survit à une panne push', async () => {

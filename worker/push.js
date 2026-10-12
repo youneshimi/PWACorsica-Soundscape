@@ -131,7 +131,8 @@ async function deliverPush(storage, env, row, message, fetcher = fetch) {
     const vapid = { subject: env.VAPID_SUBJECT || 'https://pwacorsica-soundscape.ounesshimi.workers.dev/', publicKey: env.VAPID_PUBLIC_KEY, privateKey: env.VAPID_PRIVATE_KEY };
     const payload = await buildPushPayload(message, { endpoint: row.endpoint, keys: { p256dh: row.p256dh, auth: row.auth } }, vapid);
     stage = 'send';
-    const delivery = await fetcher(row.endpoint, { ...payload, redirect: 'error', signal: AbortSignal.timeout(5000) });
+    // Cloudflare accepte « manual » ; un statut 3xx reste un échec sans second envoi.
+    const delivery = await fetcher(row.endpoint, { ...payload, redirect: 'manual', signal: AbortSignal.timeout(5000) });
     await delivery.body?.cancel();
     if (!delivery.ok) console.warn('[Push V2] Refus du fournisseur', { provider, status: delivery.status });
     if ([404, 410].includes(delivery.status)) {

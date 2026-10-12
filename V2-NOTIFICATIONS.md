@@ -90,6 +90,7 @@ Le bouton **Push** de DevTools simule une réception locale : il sert à vérifi
 
 ## Si aucune notification n'arrive
 
+- Le mode HTTP d'envoi doit être `redirect: 'manual'` dans `worker/push.js`. Cloudflare rejette `redirect: 'error'` avant le départ de la requête, avec `Invalid redirect value` ; les simulations Node seules ne détectaient pas cette incompatibilité. Une redirection 3xx est traitée comme un échec et n'est jamais suivie. Le test `test/push-runtime.test.js` vérifie désormais les options réelles dans le moteur Cloudflare local, sans envoi à Apple.
 - Après déploiement de l'ajout du test, recharger et accepter la mise à jour. Sur l'appareil déjà abonné, cliquer **Tester une notification**. Ce bouton envoie réellement un message serveur à cet appareil uniquement, après vérification de son jeton.
 - Un message de succès signifie que le fournisseur a accepté l'envoi. Vérifier ensuite le centre de notifications et les réglages du système. Un abonnement absent ou expiré demande de désactiver puis réactiver les notifications. Un refus 401/403 demande de vérifier les clés et, si elles ont changé, de se réabonner.
 - Vérifier `enabled:true`, le bouton activé et la présence de l'abonnement dans Supabase.
