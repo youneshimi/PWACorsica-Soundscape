@@ -17,4 +17,3 @@
 .push-button:disabled { opacity: 0.6; cursor: default; }
 .push-button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; }
 .push-message { flex-basis: 100%; color: var(--color-text-muted); font-size: 0.85rem; line-height: 1.4; }
-.version-label { margin-right: 0.5rem; color: var(--color-primary); font-weight: 600; }

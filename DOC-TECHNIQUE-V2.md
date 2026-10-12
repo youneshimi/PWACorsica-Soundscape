@@ -6,7 +6,7 @@
 
 **Dépôt** : https://github.com/youneshimi/PWACorsica-Soundscape
 
-**Statut** : ajout préparé et testé localement ; déploiement des notifications et réception réelle à valider. Le lien héberge déjà la V1.
+**Statut** : notifications déployées au même lien ; réception réelle confirmée sur PC et iPhone le 12 octobre 2026.
 
 ## 1. Résumé
 
@@ -32,7 +32,7 @@ Le micro et le GPS restent demandés après les clics correspondants ; le lieu p
 
 Le navigateur fournit l'endpoint et les clés de chiffrement. `/api/push/subscribe` inscrit ces données dans une table privée, avec une empreinte du jeton local de gestion. La désactivation retire la ligne et l'abonnement navigateur.
 
-« Tester une notification » utilise `/api/push/test` et cible uniquement l'abonnement protégé par le jeton de cet appareil. Le résultat distingue un envoi accepté, un abonnement absent ou expiré et un refus du fournisseur. La configuration vérifie désormais la correspondance des clés VAPID ; les logs Cloudflare sont activés explicitement et indiquent les statuts HTTP sans données d'abonnement.
+Le bouton de test a utilisé `/api/push/test` pour valider la réception sur l'appareil protégé par son jeton. Il est retiré de l'interface après validation ; l'API reste disponible pour le diagnostic technique. La configuration vérifie la correspondance des clés VAPID ; les logs Cloudflare indiquent les statuts HTTP sans données d'abonnement.
 
 Le serveur utilise `@block65/webcrypto-web-push` : VAPID et `aes128gcm`. `waitUntil` prolonge l'envoi après la sauvegarde. Seuls les services push connus sont acceptés, les redirections sont refusées et les abonnements expirés sont retirés. Le Service Worker affiche la notification et ouvre ou retrouve le son au clic. La lecture audio reste une action de l'utilisateur.
 
@@ -44,9 +44,9 @@ Les clés privées Supabase et VAPID restent dans les secrets Cloudflare. La cl�
 
 ## 7. Validation
 
-80 tests couvrent la sauvegarde, le hors connexion, la reprise sans doublon, la conservation d'un son publié avant la mise à jour, les abonnements, la signature VAPID et le déchiffrement par un destinataire simulé, la réception et le clic dans le Service Worker, les clés incohérentes et le test limité à son appareil. Un test exécute la construction de la requête réelle dans le moteur Cloudflare : il a reproduit le rejet de `redirect: 'error'`, puis validé `manual`. Les réponses 3xx restent des échecs sans suivi de redirection. Le chiffrement et la validation VAPID ont aussi été vérifiés localement avec un destinataire fictif. Le build et la préparation Wrangler sont vérifiés localement. Le linter natif est bloqué par la politique Windows.
+83 tests couvrent la sauvegarde, le hors connexion, la reprise sans doublon, les abonnements, la signature VAPID et le déchiffrement par un destinataire simulé, la réception et le clic dans le Service Worker. Le nettoyage local préserve les sons présents, les captures en attente et les sons synchronisés pendant une requête. Une réponse de secours en cache ne déclenche pas de suppression. Un test exécute la construction de la requête réelle dans le moteur Cloudflare : il a reproduit le rejet de `redirect: 'error'`, puis validé `manual`. Les réponses 3xx restent des échecs sans suivi de redirection. Le build et la préparation Wrangler sont vérifiés localement. Le linter natif est bloqué par la politique Windows.
 
-Le bouton a aussi été vérifié dans Chrome avec un serveur d'abonnement simulé : activation, désactivation, refus et absence d'abonnement au chargement. Ces contrôles ne remplacent pas une réception réelle sur téléphone. Compléter la date, les appareils, navigateurs et résultats après le parcours de [V2-NOTIFICATIONS.md](./V2-NOTIFICATIONS.md). Le bonus push reste à démontrer sur le site déployé.
+Le bouton d'abonnement a été vérifié dans Chrome avec un serveur simulé : activation, désactivation, refus et absence de demande au chargement. La réception réelle du message « Test Corsica Soundscape » est visible dans la capture iPhone du 12 octobre 2026 ; l'auteur confirme aussi la réception sur PC. Le modèle exact des appareils et le résultat détaillé du clic sur un nouveau son restent à consigner. L'interface finale conserve l'abonnement et retire le bouton de test et le repère « V2 ».
 
 ## 8. Limites
 

@@ -93,6 +93,7 @@ test('un son est conservé en base et dans Storage, puis relu avec les champs du
   assert.match(sound.audioUrl, /^\/uploads\/[a-f0-9-]+\.webm$/);
   assert.equal(p.files.size, 1);
   const list = await handleRequest(new Request('https://soundscape.test/api/sounds'), env, p.fetcher);
+  assert.equal(list.headers.get('X-Soundscape-Source'), 'network');
   assert.deepEqual(await list.json(), [sound]);
   assert.ok(!JSON.stringify(sound).includes(env.SUPABASE_SECRET_KEY));
 });

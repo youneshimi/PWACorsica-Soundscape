@@ -68,7 +68,7 @@ Ouvrir ces adresses dans de nouveaux onglets :
 
 Si la configuration retourne `enabled:false`, vérifier les noms exacts des deux clés VAPID, leur type et le secret Supabase dans le bon Worker. Une réponse 404 signale généralement que le nouveau code n'est pas encore déployé.
 
-Sur la PWA déjà ouverte, recharger en ligne et accepter **Mettre à jour** si la bannière apparaît. La carte affiche le repère **V2**. Aucune désinstallation ni suppression des données du navigateur n'est nécessaire. Dans DevTools → Application → Service workers, **Update** peut demander une vérification du nouveau `sw.js`. Ne pas utiliser **Clear storage** pendant cet essai.
+Sur la PWA déjà ouverte, recharger en ligne et accepter **Mettre à jour** si la bannière apparaît. Le repère de version est retiré de l'interface après validation. Aucune désinstallation ni suppression des données du navigateur n'est nécessaire. Dans DevTools → Application → Service workers, **Update** peut demander une vérification du nouveau `sw.js`. Ne pas utiliser **Clear storage** pendant cet essai.
 
 Refermer « À propos ». Sur mobile, ouvrir la liste des sons. Le bouton **Recevoir les nouveaux sons** apparaît si le navigateur supporte les notifications et si la configuration est active.
 
@@ -88,11 +88,13 @@ Sur iPhone/iPad, utiliser la PWA ajoutée à l'écran d'accueil avec iOS/iPadOS 
 
 Le bouton **Push** de DevTools simule une réception locale : il sert à vérifier l'affichage mais ne prouve pas l'envoi serveur. Cocher le bonus du cours après réussite du parcours réel ci-dessus. Le lien de la fiche reste le même.
 
+La réception réelle a été confirmée sur PC et iPhone le 12 octobre 2026. La capture iPhone affiche « Test Corsica Soundscape » ; l'auteur confirme aussi la réception sur PC. Le bouton « Tester une notification » a été retiré après ces essais. Le parcours normal reste la publication d'un nouveau son depuis un autre appareil.
+
 ## Si aucune notification n'arrive
 
 - Le mode HTTP d'envoi doit être `redirect: 'manual'` dans `worker/push.js`. Cloudflare rejette `redirect: 'error'` avant le départ de la requête, avec `Invalid redirect value` ; les simulations Node seules ne détectaient pas cette incompatibilité. Une redirection 3xx est traitée comme un échec et n'est jamais suivie. Le test `test/push-runtime.test.js` vérifie désormais les options réelles dans le moteur Cloudflare local, sans envoi à Apple.
-- Après déploiement de l'ajout du test, recharger et accepter la mise à jour. Sur l'appareil déjà abonné, cliquer **Tester une notification**. Ce bouton envoie réellement un message serveur à cet appareil uniquement, après vérification de son jeton.
-- Un message de succès signifie que le fournisseur a accepté l'envoi. Vérifier ensuite le centre de notifications et les réglages du système. Un abonnement absent ou expiré demande de désactiver puis réactiver les notifications. Un refus 401/403 demande de vérifier les clés et, si elles ont changé, de se réabonner.
+- Recharger et accepter la mise à jour, puis vérifier l'abonnement sur l'appareil récepteur. Publier un nouveau son depuis un autre appareil et attendre sa synchronisation.
+- Vérifier le centre de notifications et les réglages du système. Un abonnement absent ou expiré demande de désactiver puis réactiver les notifications. Un refus 401/403 dans les logs demande de vérifier les clés et, si elles ont changé, de se réabonner.
 - Vérifier `enabled:true`, le bouton activé et la présence de l'abonnement dans Supabase.
 - Vérifier les autorisations de notification du navigateur et du système, ainsi que le mode « Ne pas déranger ».
 - Vérifier que B a publié un nouveau son, visible dans `/api/sounds` après synchronisation.
@@ -118,7 +120,7 @@ Pour React, garder le Worker local lancé et utiliser `npm run dev` sur `http://
 
 Les abonnements sont privés, protégés par un jeton local dont seule l'empreinte est conservée en base, et limités à 20 appareils. Le Worker chiffre en `aes128gcm`, signe avec VAPID et utilise `waitUntil`. Il refuse les endpoints arbitraires et les redirections ; les abonnements expirés (404/410) sont retirés. Un échec temporaire garde l'abonnement.
 
-`POST /api/push/test` filtre l'abonnement par endpoint et empreinte du jeton avant l'envoi. Il ne permet pas de tester les abonnements d'autres appareils. La désactivation reste disponible même si les clés VAPID doivent être corrigées.
+`POST /api/push/test` reste disponible pour le diagnostic technique, sans bouton dans l'interface. Il filtre l'abonnement par endpoint et empreinte du jeton avant l'envoi et ne permet pas de tester les abonnements d'autres appareils. La désactivation reste disponible même si les clés VAPID doivent être corrigées.
 
 La sauvegarde du son reste réussie si le push échoue. Il n'existe pas de file serveur persistante ni de relance automatique des notifications. La livraison dépend du fournisseur, du navigateur et du système. Une réponse perdue après insertion peut empêcher le push sans perdre le son.
 

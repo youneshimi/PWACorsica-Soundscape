@@ -94,7 +94,6 @@ export default function SoundPanel({ sounds, selectedSound, onSelectSound, outbo
         <div className="panel-header">
           <h2>Carte sonore de la Corse</h2>
           <p className="sound-count">
-            <span className="version-label">V2</span>
             {filtered.length} son{filtered.length > 1 ? 's' : ''}
             {outboxCount > 0 && (
               <span className="outbox-badge">

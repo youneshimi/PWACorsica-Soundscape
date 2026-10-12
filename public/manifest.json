@@ -1,6 +1,6 @@
 {
-  "name": "Corsica Soundscape V2 — Carte sonore de la Corse",
-  "short_name": "Soundscape V2",
+  "name": "Corsica Soundscape — Carte sonore de la Corse",
+  "short_name": "Soundscape",
   "description": "Explorez et partagez les sons de la Corse : mer, vent, clochers, marchés. Une carte sonore collaborative.",
   "start_url": "/",
   "display": "standalone",

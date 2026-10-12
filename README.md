@@ -1,4 +1,4 @@
-# Corsica Soundscape — V2 notifications
+# Corsica Soundscape
 
 La version 2.0.0 ajoute les notifications push sur `main`, au même lien public : https://pwacorsica-soundscape.ounesshimi.workers.dev/. Elle conserve le Worker, les sons et les fichiers audio existants. Suivre [V2-NOTIFICATIONS.md](./V2-NOTIFICATIONS.md) pour ajouter les clés Cloudflare, publier et tester une vraie notification.
 
@@ -66,7 +66,7 @@ Une fois l’application déployée en HTTPS, ouvrez son URL sur un téléphone 
 
 - **Android / Chrome** : utilisez « Installer l’app » quand le navigateur propose l’installation, puis lancez Soundscape depuis l’écran d’accueil.
 - **iPhone / Safari** : ouvrez le menu de partage, choisissez « Sur l’écran d’accueil », activez « Ouvrir comme app web » si cette option est proposée, puis ajoutez l’app. Le [guide Apple](https://support.apple.com/fr-fr/guide/iphone/iphea86e5236/ios) détaille les étapes. Safari utilise ce menu, sans afficher le bouton d’installation personnalisé de Chrome.
-- Vérifiez l’icône, le nom « Soundscape V2 », l’ouverture en mode autonome et l’absence du bouton d’installation dans ce mode. Fermez puis relancez l’app depuis son icône.
+- Vérifiez l’icône, le nom « Soundscape », l’ouverture en mode autonome et l’absence du bouton d’installation dans ce mode. Fermez puis relancez l’app depuis son icône.
 - Dans DevTools → Application → Manifest, vérifiez les icônes 192 et 512, le mode `standalone`, la couleur verte `#3f604e` et le fond crème `#f6f3ed`.
 
 La détection utilise `display-mode: standalone` ainsi que `navigator.standalone` sur iOS. Le test sur un vrai téléphone reste à effectuer après le déploiement.
@@ -117,7 +117,7 @@ Voir [DOC-TECHNIQUE.md](./DOC-TECHNIQUE.md) pour l'application complète et [DOC
 
 ## Hébergement Cloudflare et Supabase
 
-Pour les notifications, suivre [V2-NOTIFICATIONS.md](./V2-NOTIFICATIONS.md) : configuration du Worker existant, commit sur `main`, déploiement et test de réception. [DEPLOIEMENT.md](./DEPLOIEMENT.md) décrit la configuration initiale. La réception push réelle reste à valider après publication.
+Pour les notifications, suivre [V2-NOTIFICATIONS.md](./V2-NOTIFICATIONS.md) : configuration du Worker existant, commit sur `main`, déploiement et test de réception. [DEPLOIEMENT.md](./DEPLOIEMENT.md) décrit la configuration initiale. La réception push réelle a été confirmée sur PC et iPhone le 12 octobre 2026. Le bouton de test a été retiré après validation ; l'abonnement aux nouveaux sons reste disponible. [NETTOYAGE-SONS.md](./NETTOYAGE-SONS.md) décrit le retrait des six contributions de test.
 
 ## Licence
 

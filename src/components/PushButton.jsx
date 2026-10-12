@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Bell, BellOff, Send } from 'lucide-react';
-import { disablePush, enablePush, pushActive, testPush } from '../utils/push.js';
+import { Bell, BellOff } from 'lucide-react';
+import { disablePush, enablePush, pushActive } from '../utils/push.js';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import './PushButton.css';
 
@@ -65,22 +65,6 @@ export default function PushButton() {
     }
   }
 
-  async function testNotification() {
-    if (pending.current || !subscription || !isOnline) return;
-    pending.current = true;
-    setBusy(true);
-    setMessage('');
-    try {
-      await testPush(subscription);
-      setMessage('Le service a accepté l’envoi. Vérifiez les notifications de cet appareil.');
-    } catch (error) {
-      setMessage(error.message || 'La notification de test n’a pas pu être envoyée.');
-    } finally {
-      pending.current = false;
-      setBusy(false);
-    }
-  }
-
   if (!supported || !settings) return null;
   const Icon = active ? BellOff : Bell;
   return (
@@ -89,10 +73,6 @@ export default function PushButton() {
         <Icon size={16} aria-hidden="true" />
         {busy ? 'Veuillez patienter…' : active ? 'Désactiver les notifications' : 'Recevoir les nouveaux sons'}
       </button>
-      {active && <button className="push-button" onClick={testNotification} disabled={busy || !isOnline}>
-        <Send size={16} aria-hidden="true" />
-        Tester une notification
-      </button>}
       {message && <p className="push-message" role="status">{message}</p>}
     </div>
   );

@@ -221,7 +221,7 @@ export async function handleRequest(request, env, fetcher = fetch, context) {
         if (page.length < 1000) break;
         offset += page.length;
       }
-      return json(sounds);
+      return json(sounds, 200, { 'X-Soundscape-Source': 'network' });
     }
     return json({ error: 'Méthode non autorisée.' }, 405, { Allow: 'GET, POST' });
   } catch (error) {

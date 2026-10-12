@@ -80,7 +80,7 @@ test('le Service Worker affiche le push avec une URL interne et un message de se
   await receive({ json: () => ({ url: 'https://another.test/' }) });
   assert.equal(notifications[1].options.data.url, origin + '/');
   await receive({ json: () => { throw new Error('invalid json'); } });
-  assert.equal(notifications[2].title, 'Corsica Soundscape V2');
+  assert.equal(notifications[2].title, 'Corsica Soundscape');
   await receive(null);
   assert.equal(notifications.length, 4);
 });
@@ -120,13 +120,19 @@ test('le cache API fournit les données après une panne réseau ou une erreur s
   let failure = false;
   const sw = worker(async () => {
     if (failure) throw new TypeError('offline');
-    return Response.json([{ id: 'one' }]);
+    return Response.json([{ id: 'one' }], { headers: { 'X-Soundscape-Source': 'network' } });
   });
-  assert.deepEqual(await (await sw.request('/api/sounds').response).json(), [{ id: 'one' }]);
+  const online = await sw.request('/api/sounds').response;
+  assert.equal(online.headers.get('X-Soundscape-Source'), 'network');
+  assert.deepEqual(await online.json(), [{ id: 'one' }]);
   failure = true;
-  assert.deepEqual(await (await sw.request('/api/sounds').response).json(), [{ id: 'one' }]);
+  const offline = await sw.request('/api/sounds').response;
+  assert.equal(offline.headers.get('X-Soundscape-Source'), 'cache');
+  assert.deepEqual(await offline.json(), [{ id: 'one' }]);
   sw.context.fetch = async () => new Response('Serveur indisponible', { status: 503 });
-  assert.deepEqual(await (await sw.request('/api/sounds').response).json(), [{ id: 'one' }]);
+  const fallback = await sw.request('/api/sounds').response;
+  assert.equal(fallback.headers.get('X-Soundscape-Source'), 'cache');
+  assert.deepEqual(await fallback.json(), [{ id: 'one' }]);
   sw.context.fetch = async () => new Response('Introuvable', { status: 404 });
   assert.equal((await sw.request('/api/sounds').response).status, 404);
 });

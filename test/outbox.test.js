@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import {
-  getDB, getAllSounds, getOutbox, savePendingSound, putAllSounds, putSound, addToOutbox,
+  getDB, getAllSounds, getOutbox, savePendingSound, putAllSounds, putSound, addToOutbox, completeSync,
 } from '../src/utils/db.js';
 import { syncOutbox, requestBackgroundSync } from '../src/utils/sync.js';
 import { getAudioSource } from '../src/utils/audio.js';
@@ -51,6 +51,42 @@ test('un rafraîchissement serveur conserve les sons qui attendent leur envoi', 
   await putAllSounds([{ id: 'other', title: 'Cloches', synced: true }]);
   assert.deepEqual((await getAllSounds()).map((sound) => sound.id).sort(), ['local-test', 'other']);
   assert.equal((await getOutbox()).length, 1);
+});
+
+test('une liste fraîche retire les sons supprimés et conserve les sons présents et les captures en attente', async () => {
+  const deleted = { ...serverSound, id: 'deleted', clientId: 'deleted-client', audioUrl: '/uploads/deleted.webm', audioBlob };
+  const pending = { ...localSound, id: 'local-pending', clientId: 'local-pending' };
+  await putSound(deleted);
+  await putSound({ ...serverSound, audioBlob });
+  await savePendingSound(pending);
+  const removeMissingIds = (await getAllSounds()).map((sound) => sound.id);
+  const removedAudio = await putAllSounds([serverSound], { removeMissingIds });
+  assert.deepEqual(removedAudio, ['/uploads/deleted.webm']);
+  assert.deepEqual((await getAllSounds()).map((sound) => sound.id).sort(), ['local-pending', 'server-test']);
+  assert.equal((await getOutbox()).length, 1);
+  assert.equal(await (await getAllSounds()).find((sound) => sound.id === serverSound.id).audioBlob.text(), 'recording');
+});
+
+test('une liste de secours et une réponse invalide ne suppriment aucun son synchronisé', async () => {
+  await putSound({ ...serverSound, audioBlob });
+  await putAllSounds([]);
+  assert.equal((await getAllSounds()).length, 1);
+  await assert.rejects(putAllSounds([{}], { removeMissingIds: [serverSound.id] }), /invalide/);
+  assert.equal((await getAllSounds()).length, 1);
+});
+
+test('un son synchronisé pendant la requête est conservé même si la liste ne le contient pas encore', async () => {
+  await putSound(serverSound);
+  const removeMissingIds = (await getAllSounds()).map((sound) => sound.id);
+  const pending = { ...localSound, id: 'local-new', clientId: 'local-new' };
+  await savePendingSound(pending);
+  const [entry] = await getOutbox();
+  const recent = { ...serverSound, id: 'server-new', clientId: pending.clientId, audioUrl: '/uploads/new.webm' };
+  await completeSync(entry, recent);
+  await putAllSounds([serverSound], { removeMissingIds });
+  assert.deepEqual((await getAllSounds()).map((sound) => sound.id).sort(), ['server-new', 'server-test']);
+  assert.equal((await getOutbox()).length, 0);
+  assert.equal(await (await getAllSounds()).find((sound) => sound.id === recent.id).audioBlob.text(), 'recording');
 });
 
 test('un envoi réussi remplace la copie locale et conserve le fichier audio', async () => {

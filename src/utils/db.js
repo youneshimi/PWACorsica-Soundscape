@@ -69,7 +69,8 @@ export async function savePendingSound(sound) {
 }
 
 // Conserver les sons en attente et les fichiers audio déjà téléchargés.
-export async function putAllSounds(serverSounds) {
+export async function putAllSounds(serverSounds, { removeMissingIds = [] } = {}) {
+  if (!Array.isArray(serverSounds) || serverSounds.some((sound) => !sound?.id)) throw new Error('Liste de sons invalide.');
   const db = await getDB();
   const tx = db.transaction(['sounds', 'outbox'], 'readwrite');
   const store = tx.objectStore('sounds');
@@ -77,6 +78,17 @@ export async function putAllSounds(serverSounds) {
   const localSounds = await store.getAll();
   const entries = await outbox.getAll();
   const writes = [];
+  const removedAudio = [];
+  const serverIds = new Set(serverSounds.map((sound) => sound.id));
+  const removable = new Set(removeMissingIds);
+
+  // Retirer seulement les sons déjà synchronisés au départ de la requête réseau.
+  for (const sound of localSounds) {
+    const pending = entries.some((entry) => entry.localId === sound.id || (sound.clientId && entry.clientId === sound.clientId));
+    if (!sound.synced || !removable.has(sound.id) || serverIds.has(sound.id) || pending) continue;
+    writes.push(store.delete(sound.id));
+    if (sound.audioUrl?.startsWith('/uploads/')) removedAudio.push(sound.audioUrl);
+  }
 
   for (const sound of serverSounds) {
     const entry = sound.clientId && entries.find((item) => item.clientId === sound.clientId);
@@ -93,6 +105,7 @@ export async function putAllSounds(serverSounds) {
     if (entry) writes.push(outbox.delete(entry.id));
   }
   await Promise.all([...writes, tx.done]);
+  return removedAudio;
 }
 
 export async function completeSync(entry, serverSound) {

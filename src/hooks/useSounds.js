@@ -9,18 +9,28 @@ export function useSounds() {
 
   const refreshLocal = useCallback(async () => {
     const entries = await getOutbox();
-    setSounds(await getAllSounds());
+    const saved = await getAllSounds();
+    setSounds(saved);
     setOutboxCount(entries.length);
     setLoading(false);
+    return saved;
   }, []);
 
   const loadSounds = useCallback(async () => {
-    await refreshLocal();
+    const before = await refreshLocal();
     if (!navigator.onLine) return;
     try {
       const response = await fetch('/api/sounds', { signal: AbortSignal.timeout(5000) });
       if (response.ok) {
-        await putAllSounds(await response.json());
+        const removeMissingIds = response.headers.get('X-Soundscape-Source') === 'network'
+          ? before.filter((sound) => sound.synced).map((sound) => sound.id) : [];
+        const removedAudio = await putAllSounds(await response.json(), { removeMissingIds });
+        if (removedAudio.length && 'caches' in window) {
+          try {
+            const cache = await caches.open('soundscape-data-v1');
+            await Promise.all(removedAudio.map((url) => cache.delete(url)));
+          } catch { console.warn('[Sounds] Nettoyage du cache audio différé.'); }
+        }
         await refreshLocal();
       }
     } catch {

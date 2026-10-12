@@ -144,16 +144,23 @@ async function networkFirst(request) {
   const cache = await caches.open(DATA_CACHE);
   try {
     const response = await fetch(request, { signal: AbortSignal.timeout(5000) });
-    if (response.status >= 500) return (await cachedData(request)) || response;
+    if (response.status >= 500) return offlineApiResponse(await cachedData(request)) || response;
     await saveResponse(cache, request, response);
     return response;
   } catch {
     const cached = await cachedData(request);
-    if (cached) return cached;
+    if (cached) return offlineApiResponse(cached);
     return Response.json({ error: 'offline' }, {
       status: 503,
     });
   }
+}
+
+function offlineApiResponse(response) {
+  if (!response) return;
+  const headers = new Headers(response.headers);
+  headers.set('X-Soundscape-Source', 'cache');
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }
 
 async function audioResponse(request) {
@@ -302,7 +309,7 @@ self.addEventListener('push', (event) => {
   let message = {};
   try { message = event.data?.json() || {}; } catch { /* Message de secours. */ }
   event.waitUntil(self.registration.showNotification(
-    typeof message.title === 'string' ? message.title.slice(0, 100) : 'Corsica Soundscape V2',
+    typeof message.title === 'string' ? message.title.slice(0, 100) : 'Corsica Soundscape',
     {
       body: typeof message.body === 'string' ? message.body.slice(0, 200) : 'Un nouveau son vous attend sur la carte.',
       icon: '/img/icon-192.png',
