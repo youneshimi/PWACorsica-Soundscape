@@ -91,7 +91,7 @@ export default function SoundPanel({ sounds, selectedSound, onSelectSound, outbo
 
       <aside className={`sound-panel ${isOpen ? 'open' : ''}`}>
         <div className="panel-header">
-          <h2>Sons de la Corse</h2>
+          <h2>Carte sonore de la Corse</h2>
           <p className="sound-count">
             {filtered.length} son{filtered.length > 1 ? 's' : ''}
             {outboxCount > 0 && (
