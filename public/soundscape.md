@@ -23,4 +23,18 @@ Après une première visite en ligne, l’application peut s’ouvrir sans rése
 
 Vous pouvez installer Soundscape sur votre écran d’accueil. La carte interactive et l’enregistrement nécessitent JavaScript.
 
+## Choisir le lieu de votre enregistrement
+
+La géolocalisation vous aide à placer le son là où vous l’avez enregistré. Si vous préférez ne pas partager votre position actuelle, choisissez le lieu manuellement sur la carte ou saisissez ses coordonnées. Vous pouvez écouter les contributions sans autoriser le microphone ni le GPS.
+
+## Installer l’application
+
+Sur Android ou ordinateur, utilisez « Installer l’app » lorsque le navigateur le propose. Sur iPhone, ouvrez le site dans Safari, puis utilisez le menu de partage et « Sur l’écran d’accueil ». Retrouvez ensuite la carte et vos enregistrements depuis l’icône Soundscape.
+
+## Des ambiances partagées avec tous
+
+Les sons synchronisés sont accessibles aux visiteurs de cette carte. Choisissez un titre qui décrit le lieu ou l’ambiance, comme des oiseaux en forêt, des vagues ou un marché. Évitez de publier une conversation privée ou des informations personnelles dans le son, sa description ou sa position.
+
+Pour commencer, refermez cette présentation avec « À propos », explorez les marqueurs de la carte et ouvrez la liste des sons. Les catégories Mer, Nature, Village, Animal, Musique et Marché vous aident à trouver une ambiance à écouter.
+
 [Ouvrir la carte](/)

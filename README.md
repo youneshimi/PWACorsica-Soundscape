@@ -71,11 +71,15 @@ La détection utilise `display-mode: standalone` ainsi que `navigator.standalone
 
 ### Vérifier le contenu public et le SEO
 
-La présentation de l’accueil est dans le HTML initial, sous « À propos ». Elle reste lisible sans JavaScript. [public/soundscape.md](./public/soundscape.md) reprend ce contenu en Markdown ; gardez les deux versions cohérentes si vous changez le texte. Ce fichier est précaché, y compris lors de son ouverture depuis un lien hors connexion. Le HTML référence cette version avec `rel="alternate"`, et `llms.txt` la signale aussi.
+La présentation de l’accueil est dans le HTML initial, sous « À propos ». Elle est ouverte par défaut, avec et sans JavaScript, et peut être repliée pour explorer la carte. [public/soundscape.md](./public/soundscape.md) reprend ce contenu en Markdown ; gardez les deux versions cohérentes si vous changez le texte. Ce fichier est précaché, y compris lors de son ouverture depuis un lien hors connexion. Le HTML référence cette version avec `rel="alternate"`, et `llms.txt` la signale aussi.
 
 Le site public est `https://pwacorsica-soundscape.ounesshimi.workers.dev`. Définissez `SITE_URL` avec cette adresse dans les paramètres de build Cloudflare. Pour reproduire ces URL en local, copiez `.env.example` vers `.env.production.local` et renseignez la même variable, puis relancez `npm run build`.
 
 Le build ajoute automatiquement la canonical, `og:url`, `og:image` (l’icône 512 existante) et l’URL du `WebApplication` JSON-LD dans `dist/index.html`. Il utilise le même domaine pour `dist/robots.txt`, `dist/sitemap.xml` et les liens de `dist/llms.txt`. Sans `SITE_URL`, ces URL restent absentes et le sitemap reste vide : aucune adresse de déploiement fictive n’est publiée. La configuration suppose que l’application est servie à la racine du domaine.
+
+Le sitemap contient aussi `lastmod`, calculé depuis la date du dernier commit qui touche le contenu HTML, Markdown ou l’interface. Une archive sans historique Git utilise la date du build. Un simple redéploiement dans un dépôt complet ne change pas cette date : elle représente la dernière modification significative, conformément aux [recommandations Google](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap).
+
+Chaque robot du contrôle du Hub a un groupe explicite et une raison en commentaire dans `robots.txt`. Les règles gardent l’accueil accessible et excluent `/api/` et `/uploads/`. Cloudflare utilise `404-page` avec `public/404.html` : une adresse inconnue renvoie une vraie erreur 404. La page d’accueil et le raccourci `/?action=record` continuent de fonctionner. La preview Vite utilise également une réponse 404 pour les adresses inconnues.
 
 Avec `npm run preview`, vérifiez depuis PowerShell :
 
@@ -87,11 +91,14 @@ curl.exe -H "Accept: text/markdown" http://localhost:4173/
 curl.exe http://localhost:4173/robots.txt
 curl.exe http://localhost:4173/sitemap.xml
 curl.exe http://localhost:4173/llms.txt
+curl.exe -I http://localhost:4173/une-page-qui-n-existe-pas
 ```
 
 L’accueil doit contenir le titre, la présentation et les listes sans exécuter JavaScript ; il reste en HTML même avec `Accept: text/markdown`. Le Markdown doit être servi avec `Content-Type: text/markdown; charset=utf-8`. Vite ajoute aussi `X-Robots-Tag: noindex` à cette version pour privilégier l’accueil HTML dans les résultats de recherche.
 
 Après déploiement, refaites ces vérifications avec le domaine réel, configurez les en-têtes du Markdown sur l’hébergeur et vérifiez que l’image de partage est accessible. Le score Lighthouse SEO et les données structurées restent à vérifier sur l’URL publique.
+
+Dans la fiche du cours, utiliser « Relancer l’analyse » après le nouveau déploiement. Le rapport reçu le 12 octobre indiquait 79/100 ; les modifications suivantes corrigent ses points signalés : présentation repliée, décisions explicites pour les robots, commentaires, date du sitemap et réponse 404. Le nouveau score reste à mesurer avec le même analyseur.
 
 ## Stack
 

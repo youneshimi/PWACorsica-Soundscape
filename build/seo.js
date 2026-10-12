@@ -1,17 +1,32 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { loadEnv } from 'vite';
+import { execFileSync } from 'node:child_process';
+
+function contentModifiedDate(root) {
+  const today = new Date().toISOString().slice(0, 10);
+  try {
+    // Date du dernier changement de contenu ; un simple rebuild ne la renouvelle pas.
+    const date = execFileSync('git', ['log', '-1', '--format=%cs', '--', 'index.html', 'public/soundscape.md', 'src'],
+      { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], windowsHide: true }).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date) && date <= today) return date;
+  } catch {
+    // Une archive sans historique Git utilise la date de sa construction.
+  }
+  return today;
+}
 
 export function seoPlugin(options = {}) {
   let config;
   let siteUrl;
+  let lastModified;
 
   async function publicDocument(name) {
     const source = await readFile(resolve(config.publicDir, name), 'utf8');
     if (!siteUrl) return source;
     if (name === 'robots.txt') return `${source.trimEnd()}\n\nSitemap: ${siteUrl}sitemap.xml\n`;
     if (name === 'sitemap.xml') {
-      return source.replace('</urlset>', `  <url>\n    <loc>${siteUrl}</loc>\n  </url>\n</urlset>`);
+      return source.replace('</urlset>', `  <url>\n    <loc>${siteUrl}</loc>\n    <lastmod>${lastModified}</lastmod>\n  </url>\n</urlset>`);
     }
     return source.replace('](/)', `](${siteUrl})`).replace('](/soundscape.md)', `](${siteUrl}soundscape.md)`);
   }
@@ -48,6 +63,7 @@ export function seoPlugin(options = {}) {
     name: 'soundscape-seo',
     configResolved(resolved) {
       config = resolved;
+      lastModified = contentModifiedDate(config.root);
       const value = (options.siteUrl ?? loadEnv(config.mode, config.envDir, '').SITE_URL ?? '').trim();
       if (value) {
         const url = new URL(value);

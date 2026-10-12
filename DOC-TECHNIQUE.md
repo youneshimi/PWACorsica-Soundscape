@@ -64,9 +64,9 @@ Aucune demande de permission ni notification push n'est branchée dans le parcou
 
 ## 9. Visibilité : SEO et agents IA
 
-La présentation « À propos » est dans le HTML initial, hors de React, et reste lisible sans JavaScript. `soundscape.md` reprend ce contenu et est précaché. Le HTML référence cette version et `llms.txt` la signale.
+La présentation « À propos » est dans le HTML initial, hors de React. Elle est ouverte par défaut avec et sans JavaScript, et reste repliable. `soundscape.md` reprend ce contenu et est précaché. Le HTML référence cette version et `llms.txt` la signale.
 
-`SITE_URL` configure au build la canonical, `og:url`, `og:image`, le JSON-LD et les URL de `robots.txt`, `sitemap.xml` et `llms.txt`. Le sitemap contient l'accueil. Les sons chargés depuis l'API ne sont pas rendus dans le HTML initial. Le Markdown est servi en `text/markdown` avec `X-Robots-Tag: noindex`.
+`SITE_URL` configure au build la canonical, `og:url`, `og:image`, le JSON-LD et les URL de `robots.txt`, `sitemap.xml` et `llms.txt`. Le sitemap contient l'accueil et la date de dernière modification du contenu issue de Git (date de build sans historique). Chaque robot du contrôle a une règle explicite et un commentaire. Les adresses inconnues renvoient une vraie 404. Les sons chargés depuis l'API ne sont pas rendus dans le HTML initial. Le Markdown est servi en `text/markdown` avec `X-Robots-Tag: noindex`.
 
 ## 10. Sécurité et vie privée
 
@@ -81,6 +81,7 @@ Le secret Supabase reste dans le Worker. La table utilise RLS et le bucket est p
 - Test hors connexion : « Sempre QUI » apparaît avec « Non synchronisé » et « 1 en attente ». L'auteur a confirmé la lecture et l'envoi au retour du réseau.
 - Installation visible sur ordinateur dans la capture de l'application autonome. Modèle de téléphone, navigateur, tests de refus et application d'une nouvelle version : résultats détaillés à consigner.
 - Aucun score Lighthouse ou chiffre de performance n'est annoncé sans rapport.
+- Analyse SEO du Hub reçue le 12 octobre 2026 : 79/100. Les corrections du contenu visible, des règles de robots, de `lastmod` et de la réponse 404 sont préparées ; le score doit être remesuré après déploiement. Ce score indicatif est distinct de la note du TP.
 
 ## 12. Limites connues et suite
 

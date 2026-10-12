@@ -45,7 +45,7 @@ test('le contenu public et les URL SEO restent cohérents dans le build servi sa
     assert.ok(!assets.includes('/robots.txt'));
     assert.ok(!assets.includes('/sitemap.xml'));
 
-    server = await preview({ root, configFile: false, logLevel: 'silent', plugins: [seoPlugin({ siteUrl: '' })], preview: { host: '127.0.0.1', port: 0 } });
+    server = await preview({ root, appType: 'mpa', configFile: false, logLevel: 'silent', plugins: [seoPlugin({ siteUrl: '' })], preview: { host: '127.0.0.1', port: 0 } });
     const base = `http://127.0.0.1:${server.httpServer.address().port}`;
     const homepage = await fetch(`${base}/`, { headers: { 'User-Agent': 'GPTBot', Accept: 'text/markdown' } });
     assert.equal(homepage.status, 200);
@@ -53,6 +53,7 @@ test('le contenu public et les URL SEO restent cohérents dans le build servi sa
     const publicHtml = await homepage.text();
     assert.match(publicHtml, /<h1>Corsica Soundscape<\/h1>/);
     assert.match(publicHtml, /<main class="public-content">/);
+    assert.match(publicHtml, /<details class="public-info" open>/, 'La présentation doit être visible dès l’ouverture, avec et sans JavaScript');
     assert.match(publicHtml, /<ol>[\s\S]*Choisissez un point sur la carte/);
     assert.doesNotMatch(publicHtml, /<noscript>|Sons populaires/);
     assert.match(publicHtml, /rel="alternate" type="text\/markdown" href="\/soundscape.md"/);
@@ -76,12 +77,26 @@ test('le contenu public et les URL SEO restent cohérents dans le build servi sa
 
     const robots = await fetch(`${base}/robots.txt`);
     assert.equal(robots.status, 200);
-    assert.match(await robots.text(), /^Sitemap: https:\/\/soundscape.test\/sitemap.xml$/m);
+    const rules = await robots.text();
+    assert.match(rules, /^Sitemap: https:\/\/soundscape.test\/sitemap.xml$/m);
+    for (const agent of ['Googlebot', 'GPTBot', 'OAI-SearchBot', 'ClaudeBot', 'Claude-SearchBot', 'PerplexityBot', 'CCBot', 'Google-Extended']) {
+      const group = rules.split(/\n\s*\n/).find((block) => block.includes(`User-agent: ${agent}\n`));
+      assert.ok(group, `Groupe explicite absent : ${agent}`);
+      assert.match(group, /^# .+\nUser-agent:/);
+      assert.match(group, /^Allow: \/$/m);
+      assert.match(group, /^Disallow: \/api\/$/m);
+      assert.match(group, /^Disallow: \/uploads\/$/m);
+    }
     const sitemap = await fetch(`${base}/sitemap.xml`);
     assert.equal(sitemap.status, 200);
     const xml = await sitemap.text();
     assert.match(xml, /<loc>https:\/\/soundscape.test\/<\/loc>/);
-    assert.doesNotMatch(xml, /lastmod|vercel.app/);
+    const date = xml.match(/<lastmod>(\d{4}-\d{2}-\d{2})<\/lastmod>/)?.[1];
+    assert.ok(date);
+    assert.ok(date <= new Date().toISOString().slice(0, 10), 'La date du sitemap ne doit pas être dans le futur');
+    assert.doesNotMatch(xml, /vercel.app/);
+    const missing = await fetch(`${base}/une-page-qui-n-existe-pas`, { headers: { Accept: 'text/html' } });
+    assert.equal(missing.status, 404);
     const llms = await fetch(`${base}/llms.txt`);
     assert.equal(llms.status, 200);
     assert.match(await llms.text(), /\]\(https:\/\/soundscape.test\/soundscape.md\)/);
@@ -92,7 +107,7 @@ test('le contenu public et les URL SEO restent cohérents dans le build servi sa
     assert.equal(png.getUint32(16), 512);
     assert.equal(png.getUint32(20), 512);
 
-    dev = await createServer({ root, configFile: false, logLevel: 'silent', plugins: [seoPlugin({ siteUrl: 'https://soundscape.test/' })], server: { host: '127.0.0.1', port: 0 } });
+    dev = await createServer({ root, appType: 'mpa', configFile: false, logLevel: 'silent', plugins: [seoPlugin({ siteUrl: 'https://soundscape.test/' })], server: { host: '127.0.0.1', port: 0 } });
     await dev.listen();
     const devBase = `http://127.0.0.1:${dev.httpServer.address().port}`;
     const devHome = await fetch(`${devBase}/?action=record`, { headers: { Accept: 'text/markdown' } });
@@ -102,6 +117,7 @@ test('le contenu public et les URL SEO restent cohérents dans le build servi sa
     assert.match(devMarkdown.headers.get('Content-Type'), /text\/markdown/);
     const devRobots = await fetch(`${devBase}/robots.txt`);
     assert.match(await devRobots.text(), /^Sitemap: https:\/\/soundscape.test\/sitemap.xml$/m);
+    assert.equal((await fetch(`${devBase}/une-page-qui-n-existe-pas`, { headers: { Accept: 'text/html' } })).status, 404);
   } finally {
     if (previousSiteUrl === undefined) delete process.env.SITE_URL;
     else process.env.SITE_URL = previousSiteUrl;

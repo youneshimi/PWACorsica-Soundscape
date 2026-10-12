@@ -10,6 +10,7 @@ const proxy = {
 
 // https://vite.dev/config/
 export default defineConfig({
+  appType: 'mpa',
   plugins: [react(), seoPlugin(), serviceWorkerPlugin()],
   server: {
     proxy,

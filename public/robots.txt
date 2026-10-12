@@ -5,4 +5,52 @@ Allow: /
 Disallow: /api/
 Disallow: /uploads/
 
+# Googlebot : permettre l’indexation de la présentation et de la carte publique.
+User-agent: Googlebot
+Allow: /
+Disallow: /api/
+Disallow: /uploads/
+
+# GPTBot : laisser le contenu public du projet accessible à ce robot IA.
+User-agent: GPTBot
+Allow: /
+Disallow: /api/
+Disallow: /uploads/
+
+# OAI-SearchBot : permettre la découverte du projet dans la recherche ChatGPT.
+User-agent: OAI-SearchBot
+Allow: /
+Disallow: /api/
+Disallow: /uploads/
+
+# ClaudeBot : laisser la présentation publique accessible à ce robot IA.
+User-agent: ClaudeBot
+Allow: /
+Disallow: /api/
+Disallow: /uploads/
+
+# Claude-SearchBot : permettre la découverte du projet dans la recherche Claude.
+User-agent: Claude-SearchBot
+Allow: /
+Disallow: /api/
+Disallow: /uploads/
+
+# PerplexityBot : permettre la découverte et la citation de la page publique.
+User-agent: PerplexityBot
+Allow: /
+Disallow: /api/
+Disallow: /uploads/
+
+# CCBot : autoriser l’exploration du contenu public par Common Crawl.
+User-agent: CCBot
+Allow: /
+Disallow: /api/
+Disallow: /uploads/
+
+# Google-Extended : autoriser l’utilisation du contenu public pour les usages IA concernés.
+User-agent: Google-Extended
+Allow: /
+Disallow: /api/
+Disallow: /uploads/
+
 # Le build ajoute l’adresse du sitemap quand SITE_URL est renseignée.
