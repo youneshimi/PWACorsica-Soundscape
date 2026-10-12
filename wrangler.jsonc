@@ -4,6 +4,7 @@
   "main": "worker/index.js",
   "compatibility_date": "2026-10-11",
   "workers_dev": true,
+  "keep_vars": true,
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
@@ -11,6 +12,16 @@
     "run_worker_first": ["/api", "/api/*", "/uploads", "/uploads/*"]
   },
   "vars": {
-    "SUPABASE_URL": "https://alkjdnvjsaofuepynwxw.supabase.co"
+    "SUPABASE_URL": "https://alkjdnvjsaofuepynwxw.supabase.co",
+    "VAPID_SUBJECT": "https://pwacorsica-soundscape.ounesshimi.workers.dev/"
+  },
+  "env": {
+    "v2": {
+      "name": "pwacorsica-soundscape",
+      "vars": {
+        "SUPABASE_URL": "https://alkjdnvjsaofuepynwxw.supabase.co",
+        "VAPID_SUBJECT": "https://pwacorsica-soundscape.ounesshimi.workers.dev/"
+      }
+    }
   }
 }

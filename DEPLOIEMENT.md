@@ -2,6 +2,8 @@
 
 Site : https://pwacorsica-soundscape.ounesshimi.workers.dev
 
+Pour ajouter les notifications au site déjà déployé, suivre [V2-NOTIFICATIONS.md](./V2-NOTIFICATIONS.md). Le Worker, la table `sounds` et le bucket `sounds` sont conservés. Le guide ci-dessous décrit la configuration initiale.
+
 Cloudflare sert l'interface et l'API. Supabase conserve les métadonnées dans PostgreSQL et les fichiers audio dans Storage. Le navigateur continue d'utiliser `/api/sounds` et `/uploads/` sur le domaine du site ; aucune clé Supabase n'est nécessaire dans React.
 
 ## 1. Préparer Supabase

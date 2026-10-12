@@ -44,6 +44,7 @@ function provider() {
     const path = url.pathname.split('/').pop();
     if (method === 'POST') {
       files.set(path, { body: new Uint8Array(await options.body.arrayBuffer()), type: options.headers.get('Content-Type') });
+      assert.ok(url.pathname.startsWith('/storage/v1/object/sounds/'));
       return Response.json({ Key: `sounds/${path}` });
     }
     assert.ok(url.pathname.startsWith('/storage/v1/object/authenticated/sounds/'));

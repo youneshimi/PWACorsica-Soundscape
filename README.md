@@ -1,4 +1,6 @@
-# 🎧 Corsica Soundscape
+# Corsica Soundscape — V2 notifications
+
+La version 2.0.0 ajoute les notifications push sur `main`, au même lien public : https://pwacorsica-soundscape.ounesshimi.workers.dev/. Elle conserve le Worker, les sons et les fichiers audio existants. Suivre [V2-NOTIFICATIONS.md](./V2-NOTIFICATIONS.md) pour ajouter les clés Cloudflare, publier et tester une vraie notification.
 
 Carte sonore collaborative de la Corse — PWA installable, offline-first.
 
@@ -13,9 +15,9 @@ npm install
 npm run dev
 ```
 
-L'app tourne sur `http://localhost:5173`
+L'app V2 tourne sur `http://localhost:5174`. Son proxy utilise le Worker local sur le port 8798. Pour les essais push, suivre `npm run preview:v2` dans [le guide V2](./V2-NOTIFICATIONS.md).
 
-### Backend (Express.js)
+### Backend Express (archive V1)
 
 ```bash
 cd server
@@ -25,18 +27,18 @@ npm start
 
 L'API tourne sur `http://localhost:3001`
 
-> Le proxy Vite redirige automatiquement `/api/*` vers le backend en développement.
+> La V2 utilise le Worker Cloudflare local sur le port 8798. Express conserve le fonctionnement local historique de la V1 et n'est pas utilisé par le proxy V2.
 
 ### Vérifier le mode hors connexion
 
-Le Service Worker est désactivé avec `npm run dev` pour éviter de mettre les modules de développement en cache. Pour tester la PWA, gardez le backend lancé et utilisez, depuis la racine du projet :
+Le Service Worker est désactivé avec `npm run dev` pour éviter de mettre les modules de développement en cache. Pour tester la PWA, lancez le Worker V2 et utilisez, depuis la racine du projet :
 
 ```bash
 npm run build
 npm run preview
 ```
 
-Ouvrez l'adresse affichée par Vite, habituellement `http://localhost:4173`. Le proxy fonctionne aussi en preview pour `/api` et `/uploads`.
+Ouvrez l'adresse affichée par Vite, ici `http://localhost:4183`. Le proxy vise le Worker V2 pour `/api` et `/uploads`. Pour le parcours complet push, `npm run preview:v2` sert directement la PWA sur `http://localhost:8798`.
 
 1. Chargez la page en ligne et attendez que le Service Worker soit actif dans les outils du navigateur, onglet Application.
 2. Écoutez un son pour qu'il soit mis en cache.
@@ -64,7 +66,7 @@ Une fois l’application déployée en HTTPS, ouvrez son URL sur un téléphone 
 
 - **Android / Chrome** : utilisez « Installer l’app » quand le navigateur propose l’installation, puis lancez Soundscape depuis l’écran d’accueil.
 - **iPhone / Safari** : ouvrez le menu de partage, choisissez « Sur l’écran d’accueil », activez « Ouvrir comme app web » si cette option est proposée, puis ajoutez l’app. Le [guide Apple](https://support.apple.com/fr-fr/guide/iphone/iphea86e5236/ios) détaille les étapes. Safari utilise ce menu, sans afficher le bouton d’installation personnalisé de Chrome.
-- Vérifiez l’icône, le nom « Soundscape », l’ouverture en mode autonome et l’absence du bouton d’installation dans ce mode. Fermez puis relancez l’app depuis son icône.
+- Vérifiez l’icône, le nom « Soundscape V2 », l’ouverture en mode autonome et l’absence du bouton d’installation dans ce mode. Fermez puis relancez l’app depuis son icône.
 - Dans DevTools → Application → Manifest, vérifiez les icônes 192 et 512, le mode `standalone`, la couleur verte `#3f604e` et le fond crème `#f6f3ed`.
 
 La détection utilise `display-mode: standalone` ainsi que `navigator.standalone` sur iOS. Le test sur un vrai téléphone reste à effectuer après le déploiement.
@@ -73,7 +75,7 @@ La détection utilise `display-mode: standalone` ainsi que `navigator.standalone
 
 La présentation de l’accueil est dans le HTML initial, sous « À propos ». Elle est ouverte par défaut, avec et sans JavaScript, et peut être repliée pour explorer la carte. [public/soundscape.md](./public/soundscape.md) reprend ce contenu en Markdown ; gardez les deux versions cohérentes si vous changez le texte. Ce fichier est précaché, y compris lors de son ouverture depuis un lien hors connexion. Le HTML référence cette version avec `rel="alternate"`, et `llms.txt` la signale aussi.
 
-Le site public est `https://pwacorsica-soundscape.ounesshimi.workers.dev`. Définissez `SITE_URL` avec cette adresse dans les paramètres de build Cloudflare. Pour reproduire ces URL en local, copiez `.env.example` vers `.env.production.local` et renseignez la même variable, puis relancez `npm run build`.
+La PWA conserve `https://pwacorsica-soundscape.ounesshimi.workers.dev`. Garder `SITE_URL=https://pwacorsica-soundscape.ounesshimi.workers.dev` dans les variables de build Cloudflare. Pour le build local, définir la même variable avant `npm run build`.
 
 Le build ajoute automatiquement la canonical, `og:url`, `og:image` (l’icône 512 existante) et l’URL du `WebApplication` JSON-LD dans `dist/index.html`. Il utilise le même domaine pour `dist/robots.txt`, `dist/sitemap.xml` et les liens de `dist/llms.txt`. Sans `SITE_URL`, ces URL restent absentes et le sitemap reste vide : aucune adresse de déploiement fictive n’est publiée. La configuration suppose que l’application est servie à la racine du domaine.
 
@@ -84,14 +86,14 @@ Chaque robot du contrôle du Hub a un groupe explicite et une raison en commenta
 Avec `npm run preview`, vérifiez depuis PowerShell :
 
 ```powershell
-curl.exe -A "GPTBot" http://localhost:4173/
-curl.exe -A "ClaudeBot" http://localhost:4173/soundscape.md
-curl.exe -I http://localhost:4173/soundscape.md
-curl.exe -H "Accept: text/markdown" http://localhost:4173/
-curl.exe http://localhost:4173/robots.txt
-curl.exe http://localhost:4173/sitemap.xml
-curl.exe http://localhost:4173/llms.txt
-curl.exe -I http://localhost:4173/une-page-qui-n-existe-pas
+curl.exe -A "GPTBot" http://localhost:4183/
+curl.exe -A "ClaudeBot" http://localhost:4183/soundscape.md
+curl.exe -I http://localhost:4183/soundscape.md
+curl.exe -H "Accept: text/markdown" http://localhost:4183/
+curl.exe http://localhost:4183/robots.txt
+curl.exe http://localhost:4183/sitemap.xml
+curl.exe http://localhost:4183/llms.txt
+curl.exe -I http://localhost:4183/une-page-qui-n-existe-pas
 ```
 
 L’accueil doit contenir le titre, la présentation et les listes sans exécuter JavaScript ; il reste en HTML même avec `Accept: text/markdown`. Le Markdown doit être servi avec `Content-Type: text/markdown; charset=utf-8`. Vite ajoute aussi `X-Robots-Tag: noindex` à cette version pour privilégier l’accueil HTML dans les résultats de recherche.
@@ -111,11 +113,11 @@ Dans la fiche du cours, utiliser « Relancer l’analyse » après le nouveau d�
 
 ## Document technique
 
-Voir [DOC-TECHNIQUE.md](./DOC-TECHNIQUE.md)
+Voir [DOC-TECHNIQUE.md](./DOC-TECHNIQUE.md) pour l'application complète et [DOC-TECHNIQUE-V2.md](./DOC-TECHNIQUE-V2.md) pour l'ajout des notifications.
 
 ## Hébergement Cloudflare et Supabase
 
-Les étapes de création de la table, du bucket et du secret Cloudflare sont dans [DEPLOIEMENT.md](./DEPLOIEMENT.md). La connexion réelle et la synchronisation ont été vérifiées. [DOC-TECHNIQUE.md](./DOC-TECHNIQUE.md) décrit la version publiée et distingue les tests confirmés des validations restant à consigner.
+Pour les notifications, suivre [V2-NOTIFICATIONS.md](./V2-NOTIFICATIONS.md) : configuration du Worker existant, commit sur `main`, déploiement et test de réception. [DEPLOIEMENT.md](./DEPLOIEMENT.md) décrit la configuration initiale. La réception push réelle reste à valider après publication.
 
 ## Licence
 

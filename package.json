@@ -1,16 +1,19 @@
 {
   "name": "corsica-soundscape",
   "private": true,
-  "version": "0.0.0",
+  "version": "2.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
     "test": "node --test",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "push:keys": "node scripts/generate-vapid.js",
+    "preview:v2": "wrangler dev --local --env v2 --port 8798"
   },
   "dependencies": {
+    "@block65/webcrypto-web-push": "2.0.0",
     "idb": "^8.0.4",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.54.0",

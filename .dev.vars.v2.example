@@ -1,0 +1,3 @@
+# Copier vers .dev.vars.v2 pour les essais locaux de la V2.
+# Ajouter la clé serveur Supabase ; npm run push:keys ajoute les clés VAPID.
+SUPABASE_SECRET_KEY=

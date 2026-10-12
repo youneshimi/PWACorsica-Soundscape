@@ -65,6 +65,50 @@ test('le raccourci enregistrement et index.html ouvrent le même HTML hors conne
   }
 });
 
+test('le Service Worker affiche le push avec une URL interne et un message de secours', async () => {
+  const sw = worker();
+  const notifications = [];
+  sw.context.self.registration = { showNotification: async (title, options) => { notifications.push({ title, options }); } };
+  async function receive(data) {
+    let pending;
+    sw.handlers.push({ data, waitUntil(promise) { pending = promise; } });
+    await pending;
+  }
+  await receive({ json: () => ({ title: 'Nouveau son', body: 'Vagues', url: '/?sound=one' }) });
+  assert.equal(notifications[0].options.data.url, origin + '/?sound=one');
+  assert.equal(notifications[0].options.body, 'Vagues');
+  await receive({ json: () => ({ url: 'https://another.test/' }) });
+  assert.equal(notifications[1].options.data.url, origin + '/');
+  await receive({ json: () => { throw new Error('invalid json'); } });
+  assert.equal(notifications[2].title, 'Corsica Soundscape V2');
+  await receive(null);
+  assert.equal(notifications.length, 4);
+});
+
+test('le clic push ouvre la PWA ou retrouve sa fenêtre sans recharger un enregistrement', async () => {
+  const sw = worker();
+  const opened = [];
+  const messages = [];
+  let closed = false;
+  let focused = false;
+  let clients = [];
+  sw.context.self.clients = { matchAll: async () => clients, openWindow: async (url) => { opened.push(url); } };
+  async function click() {
+    let pending;
+    sw.handlers.notificationclick({ notification: { data: { url: '/?sound=one' }, close() { closed = true; } }, waitUntil(promise) { pending = promise; } });
+    await pending;
+  }
+  await click();
+  assert.equal(closed, true);
+  assert.equal(opened[0], origin + '/?sound=one');
+  clients = [{ url: origin + '/', postMessage: (data) => messages.push(data), focus: async () => { focused = true; }, navigate() { throw new Error('no navigation during recording'); } }];
+  await click();
+  assert.equal(focused, true);
+  assert.equal(messages[0].type, 'OPEN_SOUND');
+  assert.equal(messages[0].id, 'one');
+  assert.equal(opened.length, 1);
+});
+
 test('une autre page reçoit le secours offline sans remplacer le HTML du build', async () => {
   const sw = worker();
   const cache = await sw.caches.open('soundscape-v3');
@@ -174,9 +218,10 @@ test('une mise à jour garde les sons, migre les anciens téléchargements et pr
   assert.deepEqual(await (await dataCache.match('/api/sounds')).json(), [{ id: 'one' }]);
 });
 
-test('les requêtes POST et les tuiles externes ne sont pas interceptées', () => {
+test('les requêtes POST, la configuration push et les tuiles externes ne sont pas interceptées', () => {
   const sw = worker();
   assert.equal(sw.request('/api/sounds', { method: 'POST' }).response, undefined);
+  assert.equal(sw.request('/api/push/config').response, undefined);
   assert.equal(sw.request('https://tile.openstreetmap.org/6/33/23.png').response, undefined);
 });
 

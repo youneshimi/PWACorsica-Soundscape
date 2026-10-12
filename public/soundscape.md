@@ -1,5 +1,7 @@
 # Corsica Soundscape
 
+Cette version 2 permet de recevoir une notification lorsqu’un nouveau son est partagé. L’activation est facultative : utilisez « Recevoir les nouveaux sons » dans la liste, puis autorisez les notifications. Vous pouvez les désactiver au même endroit.
+
 Une carte sonore collaborative pour découvrir la Corse à travers ses ambiances : la mer, le maquis, les villages et les marchés. Écoutez les sons partagés sur la carte ou ajoutez votre propre enregistrement.
 
 ## Comment participer ?

@@ -6,7 +6,7 @@
 
 **Dépôt** : https://github.com/youneshimi/PWACorsica-Soundscape
 
-**Statut au 12 octobre 2026** : application et API déployées ; enregistrement et synchronisation testés. Les références du téléphone de test et la démonstration de mise à jour restent à consigner.
+**Statut au 12 octobre 2026** : application et API déployées ; enregistrement et synchronisation testés. La version 2.0.0 ajoute les notifications push au même lien ; son déploiement et la réception réelle restent à valider. Les références du téléphone de test et la démonstration de mise à jour restent à consigner.
 
 ## 1. TL;DR
 
@@ -20,7 +20,7 @@ Sujet libre : partager des ambiances de mer, de nature, de village ou de musique
 
 React et Vite gèrent l'interface ; Leaflet affiche la carte. IndexedDB conserve les données locales. Le Service Worker est écrit directement, sans Workbox.
 
-Cloudflare sert `dist` et exécute `worker/index.js` pour l'API. Le Worker appelle PostgreSQL et Storage Supabase. Le navigateur utilise la même origine pour `GET`/`POST /api/sounds` et `GET`/`HEAD /uploads/<fichier>`. Express reste le backend de développement local.
+Cloudflare sert `dist` et exécute `worker/index.js` pour l'API. Le Worker appelle PostgreSQL et Storage Supabase. Le navigateur utilise la même origine pour `GET`/`POST /api/sounds` et `GET`/`HEAD /uploads/<fichier>`. La table et le bucket `sounds` existants sont conservés. Le développement utilise désormais le Worker local sur le port 8798 ; Express reste disponible pour l'ancien parcours local.
 
 Le push sur `main` déclenche le build Cloudflare (`npm run build`), puis `npx wrangler deploy`. `wrangler.jsonc` définit les routes et l'URL Supabase. `DEPLOIEMENT.md` décrit la création de la table, du bucket et du secret.
 
@@ -60,7 +60,11 @@ Le GPS est demandé au clic sur « Obtenir ma position ». En cas de refus, l'ut
 
 ## 8. Notifications
 
-Aucune demande de permission ni notification push n'est branchée dans le parcours utilisateur. L'état de synchronisation est affiché dans l'interface. Le gestionnaire `notificationclick` du Service Worker ne suffit pas à fournir une fonctionnalité push.
+La V2 propose « Recevoir les nouveaux sons ». La permission est demandée après ce clic. Le navigateur crée un abonnement ; `/api/push/subscribe` l'inscrit dans la table privée `push_subscriptions_v2`, avec une empreinte du jeton local de gestion. Le bouton permet aussi de se désabonner.
+
+Après une nouvelle insertion de son, le Worker chiffre et signe le message avec Web Push et VAPID, puis l'envoie via `waitUntil`. Les relances idempotentes ne renvoient pas le push. Le Service Worker affiche la notification et retrouve le son au clic. Les secrets privés restent dans Cloudflare. La configuration `/api/push/config` est servie sans cache.
+
+Le SQL ajoute uniquement les ressources d'abonnement ; les sons existants sont conservés. Cette démo accepte 20 abonnés et n'a pas de file persistante de reprise des notifications. Un échec du push ne fait pas échouer la sauvegarde. La réception réelle reste à vérifier selon [V2-NOTIFICATIONS.md](./V2-NOTIFICATIONS.md) ; [DOC-TECHNIQUE-V2.md](./DOC-TECHNIQUE-V2.md) décrit l'ajout.
 
 ## 9. Visibilité : SEO et agents IA
 
@@ -81,6 +85,7 @@ Le secret Supabase reste dans le Worker. La table utilise RLS et le bucket est p
 - Test hors connexion : « Sempre QUI » apparaît avec « Non synchronisé » et « 1 en attente ». L'auteur a confirmé la lecture et l'envoi au retour du réseau.
 - Installation visible sur ordinateur dans la capture de l'application autonome. Modèle de téléphone, navigateur, tests de refus et application d'une nouvelle version : résultats détaillés à consigner.
 - Aucun score Lighthouse ou chiffre de performance n'est annoncé sans rapport.
+- Notifications V2 : tests locaux de signature, chiffrement, abonnements et Service Worker ; le test serveur vers un vrai appareil reste à effectuer après déploiement. Le linter actuel est bloqué par la politique Windows qui empêche le chargement du module natif.
 - Analyse SEO du Hub reçue le 12 octobre 2026 : 79/100. Les corrections du contenu visible, des règles de robots, de `lastmod` et de la réponse 404 sont préparées ; le score doit être remesuré après déploiement. Ce score indicatif est distinct de la note du TP.
 
 ## 12. Limites connues et suite

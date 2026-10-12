@@ -5,6 +5,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Clock, Headphones, Pause, Play, X } from 'lucide-react';
 import CategoryIcon from './CategoryIcon';
+import PushButton from './PushButton';
 import { getAudioSource } from '../utils/audio.js';
 import './SoundPanel.css';
 
@@ -93,6 +94,7 @@ export default function SoundPanel({ sounds, selectedSound, onSelectSound, outbo
         <div className="panel-header">
           <h2>Carte sonore de la Corse</h2>
           <p className="sound-count">
+            <span className="version-label">V2</span>
             {filtered.length} son{filtered.length > 1 ? 's' : ''}
             {outboxCount > 0 && (
               <span className="outbox-badge">
@@ -100,6 +102,7 @@ export default function SoundPanel({ sounds, selectedSound, onSelectSound, outbo
               </span>
             )}
           </p>
+          <PushButton />
         </div>
 
         {/* Filtre par catégorie */}

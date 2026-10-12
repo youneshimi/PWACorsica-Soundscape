@@ -51,6 +51,8 @@ self.addEventListener('fetch', (event) => {
 
   // Les tuiles OSM gardent le cache HTTP du navigateur, sans téléchargement groupé.
   if (request.method !== 'GET' || url.origin !== self.location.origin) return;
+  // La configuration des notifications doit refléter les réglages du serveur.
+  if (url.pathname.startsWith('/api/push/')) return;
 
   if (request.mode === 'navigate' && url.pathname !== '/soundscape.md') {
     event.respondWith(navigationResponse(request, url));
@@ -295,19 +297,43 @@ self.addEventListener('message', (event) => {
   }
 });
 
+// Un push reçu affiche une notification visible, même avec un message incomplet.
+self.addEventListener('push', (event) => {
+  let message = {};
+  try { message = event.data?.json() || {}; } catch { /* Message de secours. */ }
+  event.waitUntil(self.registration.showNotification(
+    typeof message.title === 'string' ? message.title.slice(0, 100) : 'Corsica Soundscape V2',
+    {
+      body: typeof message.body === 'string' ? message.body.slice(0, 200) : 'Un nouveau son vous attend sur la carte.',
+      icon: '/img/icon-192.png',
+      tag: typeof message.tag === 'string' ? message.tag.slice(0, 100) : 'soundscape-new-sound',
+      data: { url: notificationUrl(message.url) },
+    },
+  ));
+});
+
+function notificationUrl(value) {
+  try {
+    const url = new URL(typeof value === 'string' ? value : '/', self.location.origin);
+    return url.origin === self.location.origin && url.pathname === '/' ? url.href : self.location.origin + '/';
+  } catch { return self.location.origin + '/'; }
+}
+
 // -- NOTIFICATION CLICK ---------------------------------------
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  const url = notificationUrl(event.notification.data?.url);
   event.waitUntil(
-    self.clients.matchAll({ type: 'window' }).then((clientList) => {
-      // Si l'app est déjà ouverte, la focus
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
-        if (client.url.includes('/') && 'focus' in client) {
+        if (new URL(client.url).origin === self.location.origin && 'focus' in client) {
+          const id = new URL(url).searchParams.get('sound');
+          if (id) client.postMessage({ type: 'OPEN_SOUND', id });
           return client.focus();
         }
       }
       // Sinon, ouvrir une nouvelle fenêtre
-      return self.clients.openWindow('/');
+      return self.clients.openWindow(url);
     })
   );
 });

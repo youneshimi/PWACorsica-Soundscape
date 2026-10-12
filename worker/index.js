@@ -1,3 +1,5 @@
+import { handlePush, notifyNewSound, pushConfigured } from './push.js';
+
 const MAX_AUDIO_SIZE = 10 * 1024 * 1024;
 const MAX_BODY_SIZE = MAX_AUDIO_SIZE + 64 * 1024;
 const CATEGORIES = new Set(['mer', 'nature', 'village', 'animal', 'musique', 'marche', 'autre']);
@@ -185,16 +187,30 @@ async function serveAudio(request, storage, path) {
   return new Response(request.method === 'HEAD' ? null : response.body, { status: response.status, headers: outputHeaders });
 }
 
-export async function handleRequest(request, env, fetcher = fetch) {
+export async function handleRequest(request, env, fetcher = fetch, context) {
   const url = new URL(request.url);
   const isApi = url.pathname === '/api' || url.pathname.startsWith('/api/');
   const isAudio = url.pathname === '/uploads' || url.pathname.startsWith('/uploads/');
   if (!isApi && !isAudio) return env.ASSETS.fetch(request);
   try {
+    if (url.pathname.startsWith('/api/push/')) {
+      const storage = url.pathname === '/api/push/config' ? null : createStorage(env, fetcher);
+      return await handlePush(request, env, storage);
+    }
     if (isApi && url.pathname !== '/api/sounds') throw new ApiError(404, 'Route API inconnue.');
     const storage = createStorage(env, fetcher);
     if (isAudio) return await serveAudio(request, storage, url.pathname.slice('/uploads/'.length));
-    if (request.method === 'POST') return await saveSound(request, storage);
+    if (request.method === 'POST') {
+      const response = await saveSound(request, storage);
+      if (response.status === 201 && pushConfigured(env)) {
+        const sound = await response.clone().json();
+        const delivery = notifyNewSound(storage, env, sound, fetcher)
+          .catch(() => console.warn('[Push V2] Envoi indisponible ; le son est sauvegardé.'));
+        if (context?.waitUntil) context.waitUntil(delivery);
+        else await delivery;
+      }
+      return response;
+    }
     if (request.method === 'GET') {
       const sounds = [];
       // PostgREST limite chaque réponse : charger les pages successives.
@@ -214,7 +230,7 @@ export async function handleRequest(request, env, fetcher = fetch) {
 }
 
 export default {
-  fetch(request, env) {
-    return handleRequest(request, env);
+  fetch(request, env, context) {
+    return handleRequest(request, env, fetch, context);
   },
 };

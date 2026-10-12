@@ -20,7 +20,7 @@ import './App.css';
 
 function App() {
   const isOnline = useOnlineStatus();
-  const { sounds, loading, outboxCount, addSound } = useSounds();
+  const { sounds, loading, outboxCount, addSound, reload } = useSounds();
 
   const [selectedSound, setSelectedSound] = useState(null);
   const [flyTo, setFlyTo] = useState(null);
@@ -28,6 +28,7 @@ function App() {
     new URLSearchParams(window.location.search).get('action') === 'record'
   );
   const [updateRegistration, setUpdateRegistration] = useState(null);
+  const [requestedSoundId, setRequestedSoundId] = useState(() => new URLSearchParams(window.location.search).get('sound'));
 
   // Enregistrer le Service Worker avec callback de mise à jour
   useEffect(() => {
@@ -40,6 +41,28 @@ function App() {
   }, []);
 
   // Sélectionner un son → fly to sur la carte
+  useEffect(() => {
+    const sound = sounds.find((item) => item.id === requestedSoundId);
+    if (!sound) return;
+    setSelectedSound(sound);
+    setFlyTo([sound.latitude, sound.longitude]);
+    setRequestedSoundId(null);
+    const params = new URLSearchParams(window.location.search);
+    params.delete('sound');
+    const query = params.toString();
+    window.history.replaceState(window.history.state, '', `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
+  }, [sounds, requestedSoundId]);
+
+  useEffect(() => {
+    function onMessage(event) {
+      if (event.data?.type !== 'OPEN_SOUND') return;
+      setRequestedSoundId(event.data.id);
+      reload().catch(() => {});
+    }
+    navigator.serviceWorker?.addEventListener('message', onMessage);
+    return () => navigator.serviceWorker?.removeEventListener('message', onMessage);
+  }, [reload]);
+
   const handleSelectSound = useCallback((sound) => {
     setSelectedSound(sound);
     setFlyTo([sound.latitude, sound.longitude]);
