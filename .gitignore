@@ -10,6 +10,9 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+
+# Documentation suivie explicitement dans Git ; ignorer les nouveaux fichiers de docs.
+docs/
 *.local
 .wrangler/
 .dev.vars*
