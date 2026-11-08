@@ -189,6 +189,21 @@ async function serveAudio(request, storage, path) {
 
 export async function handleRequest(request, env, fetcher = fetch, context) {
   const url = new URL(request.url);
+  // App Link verification - Android. Handle before the static assets fallback.
+  if (url.pathname === '/.well-known/assetlinks.json') {
+    return new Response(JSON.stringify([{
+      relation: ['delegate_permission/common.handle_all_urls'],
+      target: {
+        namespace: 'android_app',
+        package_name: 'corsica.universita.carnet',
+        sha256_cert_fingerprints: [
+          '5E:CC:62:C0:56:7A:AD:10:88:27:24:BF:10:F3:4D:88:B8:0C:41:F9:91:65:52:3C:6A:A4:0B:A5:DB:35:24:8E',
+        ],
+      },
+    }]), {
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+    });
+  }
   const isApi = url.pathname === '/api' || url.pathname.startsWith('/api/');
   const isAudio = url.pathname === '/uploads' || url.pathname.startsWith('/uploads/');
   if (!isApi && !isAudio) return env.ASSETS.fetch(request);

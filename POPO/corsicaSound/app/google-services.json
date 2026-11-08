@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "755037248011",
+    "project_id": "corsica-soundscape",
+    "storage_bucket": "corsica-soundscape.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:755037248011:android:fef12452de272d2db5450e",
+        "android_client_info": {
+          "package_name": "corsica.universita.carnet"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAQd25LAaAr_MLLkYlfUEsRP_2uC4ikSOM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

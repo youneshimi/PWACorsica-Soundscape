@@ -193,3 +193,19 @@ test('la liste charge les pages suivantes au-delà de la limite PostgREST', asyn
   assert.equal(p.calls.length, 2);
   assert.equal(p.calls[1].url.searchParams.get('offset'), '1000');
 });
+
+test('assetlinks.json is served before static assets', async () => {
+  const noAssets = { ASSETS: { fetch: () => { throw new Error('static assets should not handle assetlinks'); } } };
+  const response = await handleRequest(new Request('https://soundscape.test/.well-known/assetlinks.json'), noAssets);
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get('Content-Type'), /application\/json/);
+  assert.equal(response.headers.get('Access-Control-Allow-Origin'), '*');
+  assert.deepEqual(await response.json(), [{
+    relation: ['delegate_permission/common.handle_all_urls'],
+    target: {
+      namespace: 'android_app',
+      package_name: 'corsica.universita.carnet',
+      sha256_cert_fingerprints: ['5E:CC:62:C0:56:7A:AD:10:88:27:24:BF:10:F3:4D:88:B8:0C:41:F9:91:65:52:3C:6A:A4:0B:A5:DB:35:24:8E'],
+    },
+  }]);
+});
