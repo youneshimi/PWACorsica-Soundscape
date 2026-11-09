@@ -8,7 +8,8 @@ const EXTENSIONS = {
   'audio/mpeg': 'mp3', 'audio/wav': 'wav', 'audio/aac': 'aac',
 };
 const AUDIO_PATH = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\.(webm|m4a|ogg|mp3|wav|aac)$/;
-const COLUMNS = 'id,client_id,title,description,latitude,longitude,category,audio_path,created_at';
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const COLUMNS = 'id,client_id,title,description,latitude,longitude,category,audio_path,created_at,profile_id,profile:profiles(nickname)';
 
 class ApiError extends Error {
   constructor(status, message) {
@@ -27,6 +28,7 @@ function toSound(row) {
     title: row.title, description: row.description,
     latitude: row.latitude, longitude: row.longitude, category: row.category,
     audioUrl: `/uploads/${row.audio_path}`, createdAt: row.created_at,
+    profileId: row.profile_id ?? null, nickname: row.profile?.nickname ?? null,
     version: 1, synced: true,
   };
 }
@@ -123,7 +125,9 @@ function metadata(form) {
   const type = audio instanceof Blob ? audio.type.split(';')[0].toLowerCase() : '';
   if (!EXTENSIONS[type] || !audio.size) throw new ApiError(400, 'Un fichier audio valide est requis.');
   if (audio.size > MAX_AUDIO_SIZE) throw new ApiError(413, 'Le fichier audio dépasse 10 Mo.');
-  return { fields: { title: title.trim(), description, latitude, longitude, category }, audio, type };
+  const profileId = form.get('profileId');
+  if (profileId && (typeof profileId !== 'string' || !UUID.test(profileId))) throw new ApiError(400, 'Profil invalide.');
+  return { fields: { title: title.trim(), description, latitude, longitude, category, profile_id: profileId || null }, audio, type };
 }
 
 async function saveSound(request, storage) {
@@ -211,6 +215,18 @@ export async function handleRequest(request, env, fetcher = fetch, context) {
     if (url.pathname.startsWith('/api/push/')) {
       const storage = url.pathname === '/api/push/config' ? null : createStorage(env, fetcher);
       return await handlePush(request, env, storage, fetcher);
+    }
+    if (url.pathname === '/api/profiles') {
+      if (request.method !== 'POST') return json({ error: 'Méthode non autorisée.' }, 405, { Allow: 'POST' });
+      const profile = await request.json().catch(() => null);
+      if (!profile || !UUID.test(profile.id) || typeof profile.nickname !== 'string' || !profile.nickname.trim() || profile.nickname.trim().length > 30) throw new ApiError(400, 'Profil invalide.');
+      const storage = createStorage(env, fetcher);
+      const result = await storage.call('/rest/v1/profiles', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
+        body: JSON.stringify({ id: profile.id, nickname: profile.nickname.trim() }),
+      });
+      if (!result.ok) throw new ApiError(result.status === 409 ? 409 : 502, 'Création du profil impossible.');
+      return json((await result.json())[0], 201);
     }
     if (isApi && url.pathname !== '/api/sounds') throw new ApiError(404, 'Route API inconnue.');
     const storage = createStorage(env, fetcher);

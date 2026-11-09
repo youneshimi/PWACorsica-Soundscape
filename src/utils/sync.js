@@ -15,6 +15,7 @@ async function sendEntries() {
       data.append('latitude', entry.latitude);
       data.append('longitude', entry.longitude);
       data.append('category', entry.category || 'autre');
+      if (entry.profileId) data.append('profileId', entry.profileId);
       if (entry.audioBlob) data.append('audio', entry.audioBlob, getAudioFileName(entry.audioBlob));
 
       const response = await fetch('/api/sounds', {

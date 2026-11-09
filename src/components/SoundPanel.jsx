@@ -144,6 +144,7 @@ export default function SoundPanel({ sounds, selectedSound, onSelectSound, outbo
                       <p className="sound-desc">{sound.description}</p>
                     )}
                     <p className="sound-meta">
+                      {sound.nickname && <span>Par {sound.nickname} · </span>}
                       {new Date(sound.createdAt).toLocaleDateString('fr-FR')}
                       {!sound.synced && sound.id?.startsWith('local-') && (
                         <span className="sync-pending"> · <Clock size={12} aria-hidden="true" /> Non synchronisé</span>

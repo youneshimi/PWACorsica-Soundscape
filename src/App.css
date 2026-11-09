@@ -75,3 +75,7 @@
 .app:has(.offline-banner) .sound-list {
   padding-bottom: calc(184px + env(safe-area-inset-bottom));
 }
+.profile-backdrop { position: fixed; inset: 0; z-index: 2000; display: grid; place-items: center; background: #0009; padding: 1rem; }
+.profile-dialog { width: min(100%, 340px); background: var(--color-bg); color: var(--color-text); padding: 1.5rem; border-radius: var(--radius); display: grid; gap: 1rem; box-shadow: var(--shadow); }
+.profile-dialog input { padding: .7rem; border: 1px solid var(--color-surface-hover); border-radius: var(--radius); }
+.profile-dialog button { background: var(--color-primary); color: white; padding: .7rem; border-radius: var(--radius); }

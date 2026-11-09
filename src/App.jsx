@@ -16,6 +16,7 @@ import InstallButton from './components/InstallButton';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { useSounds } from './hooks/useSounds';
 import { registerSW } from './utils/sw-register';
+import { createProfile, getProfile } from './utils/profile';
 import './App.css';
 
 function App() {
@@ -23,6 +24,9 @@ function App() {
   const { sounds, loading, outboxCount, addSound, reload } = useSounds();
 
   const [selectedSound, setSelectedSound] = useState(null);
+  const [profile, setProfile] = useState(getProfile);
+  const [nickname, setNickname] = useState('');
+  const [profileError, setProfileError] = useState('');
   const [flyTo, setFlyTo] = useState(null);
   const [showRecorder, setShowRecorder] = useState(() =>
     new URLSearchParams(window.location.search).get('action') === 'record'
@@ -70,10 +74,10 @@ function App() {
 
   // Sauvegarder un enregistrement
   const handleSaveSound = useCallback(async (soundData) => {
-    await addSound(soundData);
+    await addSound({ ...soundData, profileId: profile?.id, nickname: profile?.nickname });
     // Centrer la carte sur le nouveau son
     setFlyTo([soundData.latitude, soundData.longitude]);
-  }, [addSound]);
+  }, [addSound, profile]);
 
   // Vérifier si on arrive avec ?action=record (shortcut manifest)
   useEffect(() => {
@@ -141,6 +145,14 @@ function App() {
 
       {/* Bouton d'installation */}
       <InstallButton />
+      {!profile && <div className="profile-backdrop"><form className="profile-dialog" onSubmit={async (event) => {
+        event.preventDefault();
+        try { setProfile(await createProfile(nickname)); setProfileError(''); }
+        catch (error) { setProfileError(error.message); }
+      }}><h2>Bienvenue en Corse</h2><p>Choisissez un pseudo pour partager vos sons.</p>
+        <input aria-label="Pseudo" maxLength={30} value={nickname} onChange={(event) => setNickname(event.target.value)} required />
+        {profileError && <p role="alert">{profileError}</p>}<button type="submit">Commencer</button>
+      </form></div>}
     </div>
   );
 }

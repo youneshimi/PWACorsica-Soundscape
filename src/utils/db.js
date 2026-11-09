@@ -62,6 +62,8 @@ export async function savePendingSound(sound) {
     latitude: sound.latitude,
     longitude: sound.longitude,
     category: sound.category,
+    profileId: sound.profileId,
+    nickname: sound.nickname,
     audioBlob: sound.audioBlob,
     createdAt: sound.createdAt,
   });
