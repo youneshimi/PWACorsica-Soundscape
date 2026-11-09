@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Download } from 'lucide-react';
+import { Download, X } from 'lucide-react';
 import './InstallButton.css';
 
 export default function InstallButton() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [dismissed, setDismissed] = useState(false);
   const [installed, setInstalled] = useState(() =>
     window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true
   );
@@ -47,11 +48,17 @@ export default function InstallButton() {
   };
 
   // Masquer si déjà installée ou si pas de prompt disponible
-  if (installed || !deferredPrompt) return null;
+  if (installed || !deferredPrompt || dismissed) return null;
 
   return (
-    <button className="install-btn" onClick={handleInstall}>
-      <Download size={18} aria-hidden="true" /> Installer l'app
-    </button>
+    <div className="install-banner" role="status">
+      <span>Emportez la carte sonore avec vous</span>
+      <button className="install-btn" onClick={handleInstall}>
+        <Download size={18} aria-hidden="true" /> Installer l'app
+      </button>
+      <button className="install-dismiss" onClick={() => setDismissed(true)} aria-label="Fermer la proposition d’installation">
+        <X size={18} aria-hidden="true" />
+      </button>
+    </div>
   );
 }

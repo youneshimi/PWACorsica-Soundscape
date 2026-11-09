@@ -316,10 +316,10 @@
 .mini-player .play-btn { width: 29px; height: 29px; }
 .mini-player input, .detail-player input { flex: 1; min-width: 0; accent-color: var(--color-primary); height: 4px; }
 .mini-player span { color: var(--color-text-muted); font-size: 9px; white-space: nowrap; }
-.sound-actions { margin-top: 7px; gap: 12px; font-size: 10px; }
+.sound-actions { margin-top: 7px; gap: 12px; font-size: 10px; flex-wrap: wrap; }
 .sound-actions button { border-radius: 6px; padding: 2px 4px; background: transparent; }
 .sound-actions .liked, .detail-actions .liked { color: #e34c65; animation: heart-pop .3s ease; }
-.details-link { margin-left: auto; color: var(--color-primary) !important; font-weight: 700; }
+.details-link { margin-left: auto; color: var(--color-primary) !important; font-weight: 700; white-space: nowrap; }
 @keyframes heart-pop { 50% { transform: scale(1.2); } }
 .empty-state { display: grid; justify-items: center; gap: 7px; padding: 25px; }
 .empty-state strong { color: var(--color-text); }
@@ -346,5 +346,5 @@
   .sound-panel { position: absolute; inset: auto 0 0; height: var(--sheet-height); max-width: none; width: 100%; border-radius: 18px 18px 0 0; box-shadow: 0 -12px 30px #162b3633; transition: height .12s ease; }
   .sound-panel.full-page { height: 100%; border-radius: 0; }
   .sheet-grip { height: 25px; flex: none; display: flex; align-items: center; justify-content: center; gap: 5px; touch-action: none; cursor: ns-resize; color: var(--color-text-muted); }.sheet-grip span { width: 32px; height: 4px; background: var(--color-text-muted); border-radius: 8px; opacity: .45; }.sound-panel.full-page .sheet-grip { display: none; }
-  .panel-header { padding: 3px 16px 10px; min-height: 0; }.panel-header h2 { font-size: 20px; }.filter-bar { padding: 0 16px 10px; }.sound-list { display: block; padding: 8px 16px 26px; }.sound-card { margin-bottom: 12px; }.sound-card-art { width: 84px; }.sound-card-content { padding: 10px; }.sound-card-art span { font-size: 27px; }
+  .panel-header { padding: 3px 16px 10px; min-height: 0; }.panel-header h2 { font-size: 20px; }.filter-bar { padding: 0 16px 10px; }.sound-list { display: block; padding: 8px 16px 160px; }.sound-card { margin-bottom: 14px; }.sound-card-art { width: 84px; }.sound-card-content { padding: 10px; }.sound-card-art span { font-size: 27px; }
 }

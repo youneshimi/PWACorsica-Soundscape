@@ -158,6 +158,8 @@ function App() {
         onThemeChange={setTheme}
       />
       </main>
+      <OfflineBanner isOnline={isOnline} outboxCount={outboxCount} />
+      <InstallButton />
       <nav className="bottom-nav" aria-label="Navigation principale">{[['map','Carte',Map],['popular','Populaires',Compass],['trails','Parcours',Route],['profile','Profil',UserRound]].map(([id,label,Icon]) => <button key={id} className={view === id || (view === 'detail' && id === 'map') ? 'active' : ''} aria-current={view === id ? 'page' : undefined} onClick={() => { setView(id); navigator.vibrate?.(8); }}><Icon size={21} /><span>{label}</span></button>)}</nav>
 
       {/* Bouton FAB enregistrement */}
@@ -179,14 +181,11 @@ function App() {
       )}
 
       {/* Bannières */}
-      <OfflineBanner isOnline={isOnline} outboxCount={outboxCount} />
       <UpdateBanner
         registration={updateRegistration}
         onDismiss={() => setUpdateRegistration(null)}
       />
 
-      {/* Bouton d'installation */}
-      <InstallButton />
       {notice && <div key={notice.id} className={`app-notice ${notice.type}`} role={notice.type === 'error' ? 'alert' : 'status'}>{notice.message}<button onClick={() => setNotice(null)} aria-label="Fermer">×</button></div>}
       {!profile && <div className="profile-backdrop"><form className="profile-dialog" onSubmit={async (event) => {
         event.preventDefault();
