@@ -259,6 +259,28 @@ export async function handleRequest(request, env, fetcher = fetch, context) {
       if (!response.ok) throw new ApiError(502, 'Interaction impossible.');
       return json({ ok: true });
     }
+    const commentsRoute = url.pathname.match(/^\/api\/sounds\/([0-9a-f-]{36})\/comments$/i);
+    if (commentsRoute) {
+      const soundId = commentsRoute[1];
+      if (!UUID.test(soundId)) throw new ApiError(404, 'Son non trouvé.');
+      if (!['GET', 'POST'].includes(request.method)) return json({ error: 'Méthode non autorisée.' }, 405, { Allow: 'GET, POST' });
+      const storage = createStorage(env, fetcher);
+      if (request.method === 'GET') {
+        const query = new URLSearchParams({ select: 'id,text,created_at,profile_id,profile:profiles(nickname)', sound_id: `eq.${soundId}`, order: 'created_at.asc', limit: '100' });
+        const response = await storage.call(`/rest/v1/comments?${query}`);
+        if (!response.ok) throw new ApiError(502, 'Commentaires indisponibles.');
+        return json((await response.json()).map((row) => ({ id: row.id, text: row.text, createdAt: row.created_at, profileId: row.profile_id, nickname: row.profile?.nickname || 'Anonyme' })));
+      }
+      const body = await request.json().catch(() => null);
+      if (!body || !UUID.test(body.profileId) || typeof body.text !== 'string' || !body.text.trim() || body.text.trim().length > 500) throw new ApiError(400, 'Commentaire invalide (500 caractères maximum).');
+      const response = await storage.call('/rest/v1/comments?select=id,text,created_at,profile_id,profile:profiles(nickname)', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
+        body: JSON.stringify({ sound_id: soundId, profile_id: body.profileId, text: body.text.trim() }),
+      });
+      if (!response.ok) throw new ApiError(502, 'Publication du commentaire impossible.');
+      const row = (await response.json())[0];
+      return json({ id: row.id, text: row.text, createdAt: row.created_at, profileId: row.profile_id, nickname: row.profile?.nickname || 'Anonyme' }, 201);
+    }
     if (isApi && url.pathname !== '/api/sounds') throw new ApiError(404, 'Route API inconnue.');
     const storage = createStorage(env, fetcher);
     if (isAudio) return await serveAudio(request, storage, url.pathname.slice('/uploads/'.length));

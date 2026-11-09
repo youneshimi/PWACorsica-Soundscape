@@ -6,6 +6,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Clock, Headphones, Heart, Pause, Play, X } from 'lucide-react';
 import CategoryIcon from './CategoryIcon';
 import PushButton from './PushButton';
+import Comments from './Comments';
 import { getAudioSource } from '../utils/audio.js';
 import './SoundPanel.css';
 
@@ -184,6 +185,7 @@ export default function SoundPanel({ sounds, selectedSound, onSelectSound, outbo
               </div>
             ))
           )}
+          <Comments sound={selectedSound} profile={profile} />
         </div>
       </aside>
     </>
