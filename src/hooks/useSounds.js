@@ -17,21 +17,39 @@ export function useSounds() {
   }, []);
 
   const loadSounds = useCallback(async () => {
-    const before = await refreshLocal();
+    let before = [];
+    try {
+      before = await refreshLocal();
+    } catch (error) {
+      // Une base locale indisponible ne doit pas bloquer la liste en ligne.
+      console.warn('[Sounds] Cache local indisponible:', error);
+      setLoading(false);
+    }
     if (!navigator.onLine) return;
     try {
       const response = await fetch('/api/sounds', { signal: AbortSignal.timeout(5000) });
       if (response.ok) {
+        const serverSounds = await response.json();
+        if (!Array.isArray(serverSounds) || serverSounds.some((sound) => !sound?.id)) {
+          throw new Error('Liste de sons invalide.');
+        }
         const removeMissingIds = response.headers.get('X-Soundscape-Source') === 'network'
           ? before.filter((sound) => sound.synced).map((sound) => sound.id) : [];
-        const removedAudio = await putAllSounds(await response.json(), { removeMissingIds });
-        if (removedAudio.length && 'caches' in window) {
-          try {
-            const cache = await caches.open('soundscape-data-v1');
-            await Promise.all(removedAudio.map((url) => cache.delete(url)));
-          } catch { console.warn('[Sounds] Nettoyage du cache audio différé.'); }
+        try {
+          const removedAudio = await putAllSounds(serverSounds, { removeMissingIds });
+          if (removedAudio.length && 'caches' in window) {
+            try {
+              const cache = await caches.open('soundscape-data-v1');
+              await Promise.all(removedAudio.map((url) => cache.delete(url)));
+            } catch { console.warn('[Sounds] Nettoyage du cache audio différé.'); }
+          }
+          await refreshLocal();
+        } catch (error) {
+          console.warn('[Sounds] Affichage depuis le réseau, cache local indisponible:', error);
+          const pending = before.filter((sound) => !sound.synced && !serverSounds.some((remote) => remote.clientId && remote.clientId === sound.clientId));
+          setSounds([...pending, ...serverSounds]);
+          setLoading(false);
         }
-        await refreshLocal();
       }
     } catch {
       // Les données locales restent affichées si le serveur est indisponible.
