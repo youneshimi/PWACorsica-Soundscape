@@ -159,7 +159,7 @@ function App() {
       />
       </main>
       <OfflineBanner isOnline={isOnline} outboxCount={outboxCount} />
-      <InstallButton />
+      <InstallButton visible={view === 'profile' && !!profile} />
       <nav className="bottom-nav" aria-label="Navigation principale">{[['map','Carte',Map],['popular','Populaires',Compass],['trails','Parcours',Route],['profile','Profil',UserRound]].map(([id,label,Icon]) => <button key={id} className={view === id || (view === 'detail' && id === 'map') ? 'active' : ''} aria-current={view === id ? 'page' : undefined} onClick={() => { setView(id); navigator.vibrate?.(8); }}><Icon size={21} /><span>{label}</span></button>)}</nav>
 
       {/* Bouton FAB enregistrement */}

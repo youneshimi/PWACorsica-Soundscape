@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Download, X } from 'lucide-react';
 import './InstallButton.css';
 
-export default function InstallButton() {
+export default function InstallButton({ visible = true }) {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [dismissed, setDismissed] = useState(false);
   const [installed, setInstalled] = useState(() =>
@@ -48,7 +48,7 @@ export default function InstallButton() {
   };
 
   // Masquer si déjà installée ou si pas de prompt disponible
-  if (installed || !deferredPrompt || dismissed) return null;
+  if (installed || !deferredPrompt || dismissed || !visible) return null;
 
   return (
     <div className="install-banner" role="status">
