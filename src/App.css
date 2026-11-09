@@ -77,13 +77,13 @@
 .app { display: flex; flex-direction: column; background: var(--color-bg); --install-offset: 0px; --offline-offset: 0px; }
 .app:has(.install-banner) { --install-offset: 58px; }
 .app:has(.offline-banner) { --offline-offset: 70px; }
-.app-header { height: 68px; flex: none; display: flex; align-items: center; gap: 12px; padding: 0 26px; border-bottom: 1px solid var(--color-surface-hover); background: var(--color-surface); z-index: 1010; }
+.app-header { height: 68px; flex: none; display: flex; align-items: center; gap: 12px; padding: 0 190px 0 26px; border-bottom: 1px solid var(--color-surface-hover); background: var(--color-surface); z-index: 1010; }
 .brand-mark { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 11px; background: var(--color-primary); color: white; font-size: 26px; line-height: 1; }
 .brand-text { display: grid; line-height: 1.2; }
 .brand-text strong { color: var(--color-text); font-size: 16px; letter-spacing: -.03em; }
 .brand-text small { color: var(--color-text-muted); font-size: 11px; margin-top: 3px; }
-.header-location { margin-left: auto; font-size: 13px; color: var(--color-text-muted); }
-.theme-toggle { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 8px; margin-left: 12px; color: var(--color-text); background: var(--color-bg); }
+.header-location { margin-left: auto; flex: none; white-space: nowrap; font-size: 13px; color: var(--color-text-muted); }
+.theme-toggle { width: 38px; height: 38px; flex: none; display: grid; place-items: center; border-radius: 8px; margin-left: 12px; color: var(--color-text); background: var(--color-bg); }
 .theme-toggle:hover { background: var(--color-surface-hover); }
 .workspace { position: relative; flex: 1; min-height: 0; display: grid; grid-template-rows: 50% 50%; }
 .workspace:has(.sound-panel.full-page) { grid-template-rows: 1fr; }
