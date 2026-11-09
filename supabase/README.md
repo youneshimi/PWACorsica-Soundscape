@@ -7,5 +7,6 @@ Exécuter ces fichiers dans le SQL Editor du projet Supabase, dans cet ordre :
 3. `003_comments.sql`
 4. `004_popular.sql` (aucun changement de schéma)
 5. `005_trails.sql`
+6. `006_delete_sounds.sql`
 
 Les tables sont accessibles uniquement via la clé serveur du Worker. Les sons déjà présents gardent `profile_id = NULL` ; leurs auteurs s'affichent sans pseudo.

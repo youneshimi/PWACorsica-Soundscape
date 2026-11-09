@@ -185,6 +185,40 @@ async function saveSound(request, storage) {
   throw new ApiError(502, 'La sauvegarde est à réessayer. Le son reste dans la file locale.');
 }
 
+async function deleteSound(id, storage) {
+  const [sound] = await storage.rows({ id: `eq.${id}`, limit: '1' });
+  if (!sound) throw new ApiError(404, 'Son non trouvé.');
+
+  const audioReference = sound.audio_path || sound.audio_url;
+  if (audioReference) {
+    let path;
+    try {
+      path = new URL(audioReference, 'https://soundscape.invalid').pathname.split('/').pop();
+    } catch {
+      throw new ApiError(502, 'Chemin audio invalide.');
+    }
+    if (!AUDIO_PATH.test(path)) throw new ApiError(502, 'Chemin audio invalide.');
+    await storage.remove(path);
+  }
+
+  for (const table of ['likes', 'comments', 'listens']) {
+    const query = new URLSearchParams({ sound_id: `eq.${id}` });
+    const response = await storage.call(`/rest/v1/${table}?${query}`, { method: 'DELETE' });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      // Les anciennes installations peuvent ne pas avoir toutes les tables sociales.
+      if (!['PGRST205', '42P01'].includes(error.code)) {
+        throw new ApiError(502, 'Suppression des interactions impossible.');
+      }
+    }
+  }
+
+  const query = new URLSearchParams({ id: `eq.${id}` });
+  const response = await storage.call(`/rest/v1/sounds?${query}`, { method: 'DELETE' });
+  if (!response.ok) throw new ApiError(502, 'Suppression du son impossible.');
+  return new Response(null, { status: 204, headers: { 'Cache-Control': 'no-store' } });
+}
+
 async function serveAudio(request, storage, path) {
   if (!AUDIO_PATH.test(path)) throw new ApiError(404, 'Son non trouvé.');
   if (!['GET', 'HEAD'].includes(request.method)) return json({ error: 'Méthode non autorisée.' }, 405, { Allow: 'GET, HEAD' });
@@ -323,6 +357,12 @@ export async function handleRequest(request, env, fetcher = fetch, context) {
       const stepsResponse = await storage.call(`/rest/v1/trail_sounds?${stepsQuery}`);
       if (!stepsResponse.ok) throw new ApiError(502, 'Étapes du parcours indisponibles.');
       return json({ id: row.id, title: row.title, description: row.description, profileId: row.profile_id, nickname: row.profile?.nickname || 'Anonyme', createdAt: row.created_at, steps: (await stepsResponse.json()).map((step) => ({ position: step.position, note: step.note, sound: toSound(step.sound) })) });
+    }
+    const soundRoute = url.pathname.match(/^\/api\/sounds\/([0-9a-f-]{36})$/i);
+    if (soundRoute) {
+      if (!UUID.test(soundRoute[1])) throw new ApiError(404, 'Son non trouvé.');
+      if (request.method !== 'DELETE') return json({ error: 'Méthode non autorisée.' }, 405, { Allow: 'DELETE' });
+      return await deleteSound(soundRoute[1], createStorage(env, fetcher));
     }
     if (isApi && url.pathname !== '/api/sounds') throw new ApiError(404, 'Route API inconnue.');
     const storage = createStorage(env, fetcher);
