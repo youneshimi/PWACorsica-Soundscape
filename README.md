@@ -87,6 +87,8 @@ Les fichiers exportés dans `public/` sont versionnés et précachés. Le build 
 
 La présentation de l’accueil est dans le HTML initial, sous « À propos ». Elle est ouverte par défaut, avec et sans JavaScript, et peut être repliée pour explorer la carte. [public/soundscape.md](./public/soundscape.md) reprend ce contenu en Markdown ; gardez les deux versions cohérentes si vous changez le texte. Ce fichier est précaché, y compris lors de son ouverture depuis un lien hors connexion. Le HTML référence cette version avec `rel="alternate"`, et `llms.txt` la signale aussi.
 
+Le Worker ajoute les derniers sons publics au HTML de l’accueil avant de l’envoyer. Leurs titres, descriptions, auteurs et lecteurs audio sont ainsi accessibles sans JavaScript. React reprend ensuite cette même zone pour la carte interactive. Si Supabase ne répond pas, le Worker sert quand même la présentation statique et une page 200 ; il ne publie pas de liste fictive. Les textes des contributeurs sont échappés avant insertion dans le HTML.
+
 La PWA utilise `https://pwacorsica-soundscape.ounesshimi.workers.dev`. Cette adresse publique est versionnée dans `.env.production` : un `npm run build` local ou Cloudflare génère donc les mêmes URL SEO. La variable d’environnement `SITE_URL` peut toujours la remplacer si le domaine de production change.
 
 Le build ajoute automatiquement la canonical, `og:url`, `og:image` (image de partage 1200 × 630) et l’URL du `WebApplication` JSON-LD dans `dist/index.html`. Il utilise le même domaine pour `dist/robots.txt`, `dist/sitemap.xml` et les liens de `dist/llms.txt`. L’image de partage est générée depuis le logo existant avec `npm run og:image` et versionnée dans `public/img/`. La configuration suppose que l’application est servie à la racine du domaine.
@@ -112,7 +114,7 @@ L’accueil doit contenir le titre, la présentation et les listes sans exécute
 
 Après déploiement, refaites ces vérifications avec le domaine réel, configurez les en-têtes du Markdown sur l’hébergeur et vérifiez que l’image de partage est accessible. Le score Lighthouse SEO et les données structurées restent à vérifier sur l’URL publique.
 
-Dans la fiche du cours, utiliser « Relancer l’analyse » après le nouveau déploiement. Le rapport reçu le 12 octobre indiquait 79/100 ; les modifications suivantes corrigent ses points signalés : présentation repliée, décisions explicites pour les robots, commentaires, date du sitemap et réponse 404. Le nouveau score reste à mesurer avec le même analyseur.
+Dans la fiche du cours, utiliser « Relancer l’analyse » après le nouveau déploiement. Le rapport du 9 novembre indiquait 92/100 : ses 8 points manquants concernaient la part du texte visible sans JavaScript. Le rendu des derniers sons dans le HTML initial vise précisément ce contrôle ; le nouveau score reste à mesurer avec le même analyseur.
 
 ## Stack
 

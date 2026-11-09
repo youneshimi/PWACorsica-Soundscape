@@ -55,6 +55,8 @@ test('le contenu public et les URL SEO restent cohérents dans le build servi sa
     const publicHtml = await homepage.text();
     assert.match(publicHtml, /<h1>Corsica Soundscape<\/h1>/);
     assert.match(publicHtml, /<main class="public-content">/);
+    assert.match(publicHtml, /<section class="initial-sounds"/);
+    assert.match(publicHtml, /<h2>Les sons de l’île<\/h2>/);
     assert.match(publicHtml, /<details class="public-info" open>/, 'La présentation doit être visible dès l’ouverture, avec et sans JavaScript');
     assert.match(publicHtml, /<ol>[\s\S]*Choisissez un point sur la carte/);
     assert.doesNotMatch(publicHtml, /<noscript>|Sons populaires/);

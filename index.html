@@ -94,7 +94,19 @@
     </details>
     <script>document.querySelector('.public-info').open = false;</script>
 
-    <div id="root"></div>
+    <div id="root">
+      <section class="initial-sounds" aria-label="Carte sonore de la Corse">
+        <header><strong>Corsica Soundscape</strong><span>La Corse, à écouter</span></header>
+        <div class="initial-sounds-content">
+          <p class="initial-eyebrow">EXPLORER LA CORSE</p>
+          <h2>Les sons de l’île</h2>
+          <p>Écoutez les ambiances partagées sur la carte : mer, nature, villages, animaux, musique et marchés.</p>
+          <div class="initial-sound-list"><!-- SOUND_PREVIEW --></div>
+          <p>La carte interactive, les filtres et l’enregistrement s’ouvrent avec JavaScript.</p>
+        </div>
+        <nav aria-label="Navigation principale">Carte · Populaires · Parcours · Profil</nav>
+      </section>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

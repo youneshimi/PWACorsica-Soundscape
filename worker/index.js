@@ -10,6 +10,45 @@ const EXTENSIONS = {
 const AUDIO_PATH = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\.(webm|m4a|ogg|mp3|wav|aac)$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const COLUMNS = 'id,client_id,title,description,latitude,longitude,category,audio_path,created_at,profile_id,profile:profiles(nickname)';
+const CATEGORY_LABELS = {
+  mer: 'Mer', nature: 'Nature', village: 'Village', animal: 'Animal',
+  musique: 'Musique', marche: 'Marché', autre: 'Autre',
+};
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  })[char]);
+}
+
+function soundPreview(row) {
+  const date = new Date(row.created_at);
+  const dateText = Number.isNaN(date.valueOf()) ? '' : ` · ${date.toLocaleDateString('fr-FR')}`;
+  const audio = AUDIO_PATH.test(row.audio_path ?? '')
+    ? `<audio controls preload="none" src="/uploads/${row.audio_path}" aria-label="Écouter ${escapeHtml(row.title)}"></audio>` : '';
+  const detail = UUID.test(row.id ?? '')
+    ? `<a href="/?sound=${encodeURIComponent(row.id)}">Voir le détail →</a>` : '';
+  return `<article class="initial-sound"><span class="initial-category">${CATEGORY_LABELS[row.category] ?? 'Autre'}</span><h3>${escapeHtml(row.title)}</h3>${row.description ? `<p>${escapeHtml(row.description)}</p>` : ''}<p>Par ${escapeHtml(row.profile?.nickname || 'Anonyme')}${dateText}</p>${audio}${detail}</article>`;
+}
+
+async function serveHomepage(request, env, fetcher) {
+  const response = await env.ASSETS.fetch(request);
+  if (!response.ok || request.method === 'HEAD') return response;
+  const html = await response.text();
+  if (!html.includes('<!-- SOUND_PREVIEW -->')) return new Response(html, response);
+  let preview = '';
+  try {
+    const rows = await createStorage(env, fetcher).rows({ order: 'created_at.desc,id.asc', limit: '8' });
+    preview = rows.map(soundPreview).join('');
+  } catch {
+    // La présentation statique reste disponible si Supabase est indisponible.
+  }
+  const headers = new Headers(response.headers);
+  headers.delete('Content-Length');
+  headers.delete('ETag');
+  headers.set('Cache-Control', 'no-cache');
+  return new Response(html.replace('<!-- SOUND_PREVIEW -->', preview), { status: response.status, headers });
+}
 
 class ApiError extends Error {
   constructor(status, message) {
@@ -257,7 +296,12 @@ export async function handleRequest(request, env, fetcher = fetch, context) {
   }
   const isApi = url.pathname === '/api' || url.pathname.startsWith('/api/');
   const isAudio = url.pathname === '/uploads' || url.pathname.startsWith('/uploads/');
-  if (!isApi && !isAudio) return env.ASSETS.fetch(request);
+  if (!isApi && !isAudio) {
+    if (['/', '/index.html'].includes(url.pathname) && ['GET', 'HEAD'].includes(request.method)) {
+      return serveHomepage(request, env, fetcher);
+    }
+    return env.ASSETS.fetch(request);
+  }
   try {
     if (url.pathname.startsWith('/api/push/')) {
       const storage = url.pathname === '/api/push/config' ? null : createStorage(env, fetcher);
