@@ -107,7 +107,8 @@ export default function SoundPanel({ sounds, selectedSound: selectedSoundProp, o
   const seek = (event) => { if (audioRef.current) audioRef.current.currentTime = Number(event.target.value); };
   const source = view === 'popular' ? popular : sounds;
   const filtered = filter === 'all' ? source : source.filter((sound) => sound.category === filter);
-  const listLoading = view === 'popular' ? popularLoading : loading;
+  // Les sons déjà disponibles restent visibles pendant un rafraîchissement.
+  const listLoading = (view === 'popular' ? popularLoading : loading) && filtered.length === 0;
 
   return <aside className={`sound-panel ${view !== 'map' && view !== 'trails' ? 'full-page' : ''}`} style={{ '--sheet-height': `${sheetHeight}%` }}>
     <div className="sheet-grip" onPointerDown={(event) => { dragRef.current = { y: event.clientY, height: sheetHeight }; event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (!dragRef.current || innerWidth > 768) return; setSheetHeight(Math.max(26, Math.min(88, dragRef.current.height + (dragRef.current.y - event.clientY) / innerHeight * 100))); }} onPointerUp={() => { dragRef.current = null; }} onPointerCancel={() => { dragRef.current = null; }} role="slider" tabIndex={0} aria-label="Hauteur de la liste" aria-valuemin={26} aria-valuemax={88} aria-valuenow={sheetHeight} onKeyDown={(event) => { if (event.key === 'ArrowUp') setSheetHeight((h) => Math.min(88, h + 10)); if (event.key === 'ArrowDown') setSheetHeight((h) => Math.max(26, h - 10)); }}><span /><ChevronUp size={15} /></div>
