@@ -151,6 +151,9 @@
 .sound-card.pending {
   border-left: 3px solid var(--color-warning);
 }
+.sound-actions { display: flex; align-items: center; gap: 1rem; margin-top: .65rem; font-size: .8rem; color: var(--color-text-muted); }
+.sound-actions button, .sound-actions span { display: inline-flex; align-items: center; gap: .3rem; color: inherit; }
+.sound-actions button[aria-pressed="true"] { color: #e05270; }
 
 .sound-card-header {
   display: flex;

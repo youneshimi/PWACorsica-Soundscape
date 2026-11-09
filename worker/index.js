@@ -29,6 +29,7 @@ function toSound(row) {
     latitude: row.latitude, longitude: row.longitude, category: row.category,
     audioUrl: `/uploads/${row.audio_path}`, createdAt: row.created_at,
     profileId: row.profile_id ?? null, nickname: row.profile?.nickname ?? null,
+    likesCount: Number(row.likes_count ?? 0), listensCount: Number(row.listens_count ?? 0),
     version: 1, synced: true,
   };
 }
@@ -61,6 +62,18 @@ function createStorage(env, fetcher) {
 
   return {
     call, rows,
+    async stats() {
+      const result = [];
+      for (let offset = 0; ; offset += 1000) {
+        const query = new URLSearchParams({ select: 'sound_id,likes_count,listens_count', limit: '1000', offset: String(offset) });
+        const response = await call(`/rest/v1/sound_stats?${query}`);
+        if (!response.ok) throw new ApiError(502, 'Les compteurs sont indisponibles.');
+        const page = await response.json();
+        if (!Array.isArray(page)) throw new ApiError(502, 'Réponse Supabase invalide.');
+        result.push(...page);
+        if (page.length < 1000) return result;
+      }
+    },
     async find(clientId) {
       return (await rows({ client_id: `eq.${clientId}`, limit: '1' }))[0];
     },
@@ -228,6 +241,24 @@ export async function handleRequest(request, env, fetcher = fetch, context) {
       if (!result.ok) throw new ApiError(result.status === 409 ? 409 : 502, 'Création du profil impossible.');
       return json((await result.json())[0], 201);
     }
+    const interaction = url.pathname.match(/^\/api\/sounds\/([0-9a-f-]{36})\/(like|listen)$/i);
+    if (interaction) {
+      const [, soundId, action] = interaction;
+      if (!UUID.test(soundId)) throw new ApiError(404, 'Son non trouvé.');
+      if (!['POST', 'DELETE'].includes(request.method) || (action === 'listen' && request.method !== 'POST')) return json({ error: 'Méthode non autorisée.' }, 405, { Allow: action === 'like' ? 'POST, DELETE' : 'POST' });
+      const body = await request.json().catch(() => null);
+      if (!body || !UUID.test(body.profileId)) throw new ApiError(400, 'Profil invalide.');
+      const storage = createStorage(env, fetcher);
+      const table = action === 'like' ? 'likes' : 'listens';
+      const query = new URLSearchParams({ sound_id: `eq.${soundId}`, profile_id: `eq.${body.profileId}` });
+      const response = await storage.call(request.method === 'DELETE' ? `/rest/v1/${table}?${query}` : `/rest/v1/${table}${action === 'like' ? '?on_conflict=sound_id,profile_id' : ''}`, {
+        method: request.method,
+        headers: request.method === 'POST' ? { 'Content-Type': 'application/json', Prefer: action === 'like' ? 'resolution=ignore-duplicates' : 'return=minimal' } : {},
+        ...(request.method === 'POST' ? { body: JSON.stringify({ sound_id: soundId, profile_id: body.profileId }) } : {}),
+      });
+      if (!response.ok) throw new ApiError(502, 'Interaction impossible.');
+      return json({ ok: true });
+    }
     if (isApi && url.pathname !== '/api/sounds') throw new ApiError(404, 'Route API inconnue.');
     const storage = createStorage(env, fetcher);
     if (isAudio) return await serveAudio(request, storage, url.pathname.slice('/uploads/'.length));
@@ -251,6 +282,11 @@ export async function handleRequest(request, env, fetcher = fetch, context) {
         sounds.push(...page.map(toSound));
         if (page.length < 1000) break;
         offset += page.length;
+      }
+      const stats = new Map((await storage.stats()).map((row) => [row.sound_id, row]));
+      for (const sound of sounds) {
+        sound.likesCount = Number(stats.get(sound.id)?.likes_count ?? 0);
+        sound.listensCount = Number(stats.get(sound.id)?.listens_count ?? 0);
       }
       return json(sounds, 200, { 'X-Soundscape-Source': 'network' });
     }

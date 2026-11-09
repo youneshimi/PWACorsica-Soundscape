@@ -21,6 +21,11 @@ function provider() {
     assert.equal(options.headers.get('Authorization'), null);
     assert.equal(options.headers.get('User-Agent'), 'Corsica-Soundscape-Worker');
     if (state.offline) throw new Error('provider unavailable');
+    if (url.pathname === '/rest/v1/sound_stats') {
+      const offset = Number(url.searchParams.get('offset') || 0);
+      const limit = Number(url.searchParams.get('limit') || 1000);
+      return Response.json(rows.map((row) => ({ sound_id: row.id, likes_count: 0, listens_count: 0 })).slice(offset, offset + limit));
+    }
     if (url.pathname === '/rest/v1/sounds') {
       if (method === 'GET') {
         const filter = url.searchParams.get('client_id');
@@ -190,7 +195,7 @@ test('la liste charge les pages suivantes au-delà de la limite PostgREST', asyn
   for (let i = 0; i < 1001; i++) p.rows.push({ id: String(i), audio_path: `${i}.webm` });
   const response = await handleRequest(new Request('https://soundscape.test/api/sounds'), env, p.fetcher);
   assert.equal((await response.json()).length, 1001);
-  assert.equal(p.calls.length, 2);
+  assert.equal(p.calls.length, 4);
   assert.equal(p.calls[1].url.searchParams.get('offset'), '1000');
 });
 

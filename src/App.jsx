@@ -27,6 +27,9 @@ function App() {
   const [profile, setProfile] = useState(getProfile);
   const [nickname, setNickname] = useState('');
   const [profileError, setProfileError] = useState('');
+  const [stats, setStats] = useState({});
+  const displayedSounds = sounds.map((sound) => ({ ...sound, ...stats[sound.id] }));
+  const updateStats = useCallback((id, patch) => setStats((previous) => ({ ...previous, [id]: { ...previous[id], ...patch } })), []);
   const [flyTo, setFlyTo] = useState(null);
   const [showRecorder, setShowRecorder] = useState(() =>
     new URLSearchParams(window.location.search).get('action') === 'record'
@@ -102,7 +105,7 @@ function App() {
           </div>
         ) : (
           <SoundMap
-            sounds={sounds}
+            sounds={displayedSounds}
             selectedSound={selectedSound}
             onSelectSound={handleSelectSound}
             flyTo={flyTo}
@@ -112,10 +115,12 @@ function App() {
 
       {/* Panneau latéral */}
       <SoundPanel
-        sounds={sounds}
+        sounds={displayedSounds}
         selectedSound={selectedSound}
         onSelectSound={handleSelectSound}
         outboxCount={outboxCount}
+        profile={profile}
+        onStatsChange={updateStats}
       />
 
       {/* Bouton FAB enregistrement */}
