@@ -281,6 +281,20 @@ export async function handleRequest(request, env, fetcher = fetch, context) {
       const row = (await response.json())[0];
       return json({ id: row.id, text: row.text, createdAt: row.created_at, profileId: row.profile_id, nickname: row.profile?.nickname || 'Anonyme' }, 201);
     }
+    if (url.pathname === '/api/sounds/popular') {
+      if (request.method !== 'GET') return json({ error: 'Méthode non autorisée.' }, 405, { Allow: 'GET' });
+      const sort = url.searchParams.get('sort') || 'likes';
+      const limit = Number(url.searchParams.get('limit') || 10);
+      if (!['likes', 'listens'].includes(sort) || !Number.isInteger(limit) || limit < 1 || limit > 100) throw new ApiError(400, 'Tri ou limite invalide.');
+      const storage = createStorage(env, fetcher);
+      const stats = await storage.stats();
+      const ranking = stats.sort((a, b) => Number(b[`${sort}_count`]) - Number(a[`${sort}_count`]) || a.sound_id.localeCompare(b.sound_id)).slice(0, limit);
+      if (!ranking.length) return json([]);
+      const ids = ranking.map((row) => row.sound_id);
+      const rows = await storage.rows({ id: `in.(${ids.join(',')})` });
+      const byId = new Map(rows.map((row) => [row.id, row]));
+      return json(ranking.filter((row) => byId.has(row.sound_id)).map((row) => toSound({ ...byId.get(row.sound_id), ...row })));
+    }
     if (isApi && url.pathname !== '/api/sounds') throw new ApiError(404, 'Route API inconnue.');
     const storage = createStorage(env, fetcher);
     if (isAudio) return await serveAudio(request, storage, url.pathname.slice('/uploads/'.length));

@@ -27,6 +27,7 @@ function App() {
   const [profile, setProfile] = useState(getProfile);
   const [nickname, setNickname] = useState('');
   const [profileError, setProfileError] = useState('');
+  const [view, setView] = useState('map');
   const [stats, setStats] = useState({});
   const displayedSounds = sounds.map((sound) => ({ ...sound, ...stats[sound.id] }));
   const updateStats = useCallback((id, patch) => setStats((previous) => ({ ...previous, [id]: { ...previous[id], ...patch } })), []);
@@ -121,6 +122,8 @@ function App() {
         outboxCount={outboxCount}
         profile={profile}
         onStatsChange={updateStats}
+        view={view}
+        onViewChange={setView}
       />
 
       {/* Bouton FAB enregistrement */}

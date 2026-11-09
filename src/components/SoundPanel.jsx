@@ -21,7 +21,7 @@ const categories = [
   { value: 'autre', label: 'Autre' },
 ];
 
-export default function SoundPanel({ sounds, selectedSound, onSelectSound, outboxCount, profile, onStatsChange }) {
+export default function SoundPanel({ sounds, selectedSound, onSelectSound, outboxCount, profile, onStatsChange, view, onViewChange }) {
   const [filter, setFilter] = useState('all');
   const [isOpen, setIsOpen] = useState(false);
   const audioRef = useRef(null);
@@ -31,6 +31,17 @@ export default function SoundPanel({ sounds, selectedSound, onSelectSound, outbo
   const [liked, setLiked] = useState(() => {
     try { return JSON.parse(localStorage.getItem('corsica-soundscape-liked') || '{}'); } catch { return {}; }
   });
+  const [popularSort, setPopularSort] = useState('likes');
+  const [popular, setPopular] = useState([]);
+  useEffect(() => {
+    if (view !== 'popular') return;
+    let active = true;
+    fetch(`/api/sounds/popular?sort=${popularSort}&limit=10`)
+      .then((response) => { if (!response.ok) throw new Error('Classement indisponible.'); return response.json(); })
+      .then((items) => { if (active) { setPopular(items); setPlayError(''); } })
+      .catch((error) => { if (active) setPlayError(error.message); });
+    return () => { active = false; };
+  }, [view, popularSort]);
 
   async function toggleLike(sound) {
     if (!profile || !sound.synced) return;
@@ -45,9 +56,8 @@ export default function SoundPanel({ sounds, selectedSound, onSelectSound, outbo
     } catch (error) { setPlayError(error.message); }
   }
 
-  const filtered = filter === 'all'
-    ? sounds
-    : sounds.filter((s) => s.category === filter);
+  const source = view === 'popular' ? popular : sounds;
+  const filtered = filter === 'all' ? source : source.filter((s) => s.category === filter);
 
   const stopPlayback = useCallback(() => {
     if (audioRef.current) {
@@ -124,6 +134,8 @@ export default function SoundPanel({ sounds, selectedSound, onSelectSound, outbo
             )}
           </p>
           <PushButton />
+          <nav className="panel-nav" aria-label="Pages"><button className={view === 'map' ? 'active' : ''} onClick={() => onViewChange('map')}>Carte</button><button className={view === 'popular' ? 'active' : ''} onClick={() => onViewChange('popular')}>Populaires</button></nav>
+          {view === 'popular' && <div className="popular-sort"><label htmlFor="popular-sort">Trier par </label><select id="popular-sort" value={popularSort} onChange={(event) => setPopularSort(event.target.value)}><option value="likes">Likes</option><option value="listens">Écoutes</option></select></div>}
         </div>
 
         {/* Filtre par catégorie */}

@@ -160,6 +160,11 @@
 .comments form { display: flex; gap: .4rem; margin-top: .75rem; }
 .comments input { min-width: 0; flex: 1; padding: .6rem; border: 1px solid var(--color-surface-hover); border-radius: var(--radius); }
 .comments button { background: var(--color-primary); color: white; padding: .6rem; border-radius: var(--radius); }
+.panel-nav { display: flex; gap: .5rem; margin-top: 1rem; }
+.panel-nav button { padding: .5rem .7rem; border-radius: var(--radius); background: var(--color-surface); color: var(--color-text); }
+.panel-nav button.active { background: var(--color-primary); color: white; }
+.popular-sort { margin-top: .7rem; font-size: .85rem; }
+.popular-sort select { padding: .35rem; border-radius: var(--radius); }
 
 .sound-card-header {
   display: flex;

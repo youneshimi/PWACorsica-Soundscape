@@ -1,0 +1,2 @@
+-- Aucun changement de schéma : la route Populaires utilise public.sound_stats
+-- créé dans 002_likes_listens.sql.
