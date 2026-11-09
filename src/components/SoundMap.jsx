@@ -30,9 +30,9 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
-// Centre de la Corse (Corte)
-const CORSICA_CENTER = [42.3, 9.15];
-const CORSICA_ZOOM = 9;
+const CORSICA_CENTER = [42.15, 9.1];
+const CORSICA_ZOOM = 8;
+const CORSICA_BOUNDS = L.latLngBounds([41.35, 8.55], [43.05, 9.65]);
 
 // Icônes par catégorie
 const categoryIcons = {
@@ -61,7 +61,7 @@ function FlyToLocation({ position }) {
   const map = useMap();
   useEffect(() => {
     if (position) {
-      map.flyTo(position, 14, { duration: 1 });
+      map.flyTo(CORSICA_BOUNDS.contains(position) ? position : CORSICA_CENTER, 14, { duration: 1 });
     }
   }, [position, map]);
   return null;
@@ -71,7 +71,10 @@ function FitTrail({ trail }) {
   const map = useMap();
   useEffect(() => {
     if (trail?.steps?.length) {
-      map.fitBounds(trail.steps.map((step) => [step.sound.latitude, step.sound.longitude]), { padding: [35, 35], maxZoom: 13 });
+      map.fitBounds(trail.steps.map((step) => {
+        const point = [step.sound.latitude, step.sound.longitude];
+        return CORSICA_BOUNDS.contains(point) ? point : CORSICA_CENTER;
+      }), { padding: [35, 35], maxZoom: 13 });
     }
   }, [trail, map]);
   return null;
@@ -82,6 +85,10 @@ export default function SoundMap({ sounds, selectedSound, onSelectSound, flyTo, 
     <MapContainer
       center={CORSICA_CENTER}
       zoom={CORSICA_ZOOM}
+      minZoom={7}
+      maxZoom={18}
+      maxBounds={CORSICA_BOUNDS}
+      maxBoundsViscosity={1}
       style={{ height: '100%', width: '100%' }}
       zoomControl={false}
     >
