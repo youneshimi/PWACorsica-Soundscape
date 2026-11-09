@@ -57,12 +57,17 @@ export function useSounds() {
   }, [refreshLocal]);
 
   const flushOutbox = useCallback(async () => {
+    // Afficher d'abord les sons locaux et ceux du serveur : l'envoi différé
+    // (ou l'enregistrement du profil) ne doit pas bloquer la liste Carte.
+    await loadSounds();
     try {
-      if (navigator.onLine) await syncOutbox();
+      if (navigator.onLine && (await getOutbox()).length) {
+        await syncOutbox();
+        await loadSounds();
+      }
     } catch (error) {
       console.warn('[Sounds] Envoi différé:', error.message);
     }
-    await loadSounds();
     if ((await getOutbox()).length) await requestBackgroundSync();
   }, [loadSounds]);
 
