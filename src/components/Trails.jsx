@@ -9,9 +9,11 @@ export default function Trails({ sounds, profile, onSelectSound, onSelectTrail }
   const [selected, setSelected] = useState([]);
   const [error, setError] = useState('');
   useEffect(() => {
-    fetch('/api/trails').then((response) => { if (!response.ok) throw new Error('Parcours indisponibles.'); return response.json(); })
+    const load = () => fetch('/api/trails').then((response) => { if (!response.ok) throw new Error('Parcours indisponibles.'); return response.json(); })
       .then(setTrails).catch((failure) => setError(failure.message));
-    return () => onSelectTrail(null);
+    load();
+    window.addEventListener('soundscape-refresh', load);
+    return () => { window.removeEventListener('soundscape-refresh', load); onSelectTrail(null); };
   }, [onSelectTrail]);
   async function openTrail(id) {
     try {

@@ -1,19 +1,65 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
 :root {
-  --color-bg: #f6f3ed;
-  --color-surface: #fffdf8;
-  --color-surface-hover: #e5e0d6;
-  --color-primary: #3f604e;
-  --color-primary-hover: #314b3d;
-  --color-accent: #3f604e;
-  --color-accent-hover: #314b3d;
-  --color-gold: #8c5b1f;
-  --color-text: #30352f;
-  --color-text-muted: #686b61;
-  --color-danger: #a34032;
-  --color-success: #40644d;
-  --color-warning: #8c5b1f;
-  --radius: 6px;
-  --shadow: 0 2px 6px rgba(48, 53, 47, 0.12);
+  color-scheme: light;
+  --color-bg: #f5f8f8;
+  --color-surface: #fafafa;
+  --color-surface-hover: #e7eef0;
+  --color-primary: #1b6b93;
+  --color-primary-hover: #155674;
+  --color-accent: #4e9f3d;
+  --color-accent-hover: #3b7f30;
+  --color-gold: #9a7930;
+  --color-sand: #f7e987;
+  --color-text: #2c3333;
+  --color-text-muted: #647477;
+  --color-danger: #d84c54;
+  --color-success: #4e9f3d;
+  --color-warning: #a7711e;
+  --radius: 12px;
+  --button-radius: 8px;
+  --shadow: 0 8px 24px rgba(27, 61, 74, .10);
+  --shadow-hover: 0 14px 34px rgba(27, 61, 74, .16);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --color-bg: #162225;
+    --color-surface: #203035;
+    --color-surface-hover: #31464b;
+    --color-primary: #70b8df;
+    --color-primary-hover: #99d3ef;
+    --color-accent: #89c879;
+    --color-accent-hover: #a9daa0;
+    --color-gold: #e9ce70;
+    --color-text: #f2f6f5;
+    --color-text-muted: #b0c3c6;
+    --color-danger: #ff8990;
+    --color-success: #89c879;
+    --color-warning: #e4b669;
+    --shadow: 0 8px 24px rgba(0, 0, 0, .23);
+    --shadow-hover: 0 14px 34px rgba(0, 0, 0, .32);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: #162225;
+  --color-surface: #203035;
+  --color-surface-hover: #31464b;
+  --color-primary: #70b8df;
+  --color-primary-hover: #99d3ef;
+  --color-accent: #89c879;
+  --color-accent-hover: #a9daa0;
+  --color-gold: #e9ce70;
+  --color-text: #f2f6f5;
+  --color-text-muted: #b0c3c6;
+  --color-danger: #ff8990;
+  --color-success: #89c879;
+  --color-warning: #e4b669;
+  --shadow: 0 8px 24px rgba(0, 0, 0, .23);
+  --shadow-hover: 0 14px 34px rgba(0, 0, 0, .32);
 }
 
 * {
@@ -28,13 +74,21 @@ html, body, #root {
 }
 
 body {
-  font-family: Arial, sans-serif;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   line-height: 1.5;
   background: var(--color-bg);
   color: var(--color-text);
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
 }
+
+body, button, input, textarea, select { font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+button, a { -webkit-tap-highlight-color: transparent; }
+button { position: relative; overflow: hidden; }
+button:not(:disabled):active { transform: scale(.98); }
+button::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: currentColor; opacity: 0; transition: opacity .25s; pointer-events: none; }
+button:not(:disabled):active::after { opacity: .09; }
+html { scroll-behavior: smooth; }
 
 .lucide {
   flex-shrink: 0;
@@ -72,12 +126,15 @@ body {
   background: var(--color-surface);
   color: var(--color-primary);
   box-shadow: var(--shadow);
+  transition: transform .2s ease, background .2s ease;
 }
+.map-marker:hover { transform: translateY(-3px) scale(1.08); }
 
 .map-marker.selected {
   background: var(--color-primary);
   color: white;
 }
+.sound-cluster { display: grid; place-items: center; width: 42px; height: 42px; border: 3px solid white; border-radius: 50%; background: var(--color-primary); color: white; font-weight: 800; box-shadow: 0 4px 12px #0004; }
 
 .map-popup {
   min-width: 180px;
@@ -118,7 +175,7 @@ select {
 button {
   cursor: pointer;
   border: none;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition: background-color .2s ease, border-color .2s ease, transform .2s ease, box-shadow .2s ease;
 }
 
 button:focus-visible,
@@ -140,9 +197,10 @@ a:focus-visible {
   max-width: calc(100% - 32px);
   background: var(--color-surface);
   border: 1px solid var(--color-surface-hover);
-  border-radius: var(--radius);
+  border-radius: 12px;
   box-shadow: var(--shadow);
 }
+.public-info summary { font-size: .8rem; font-weight: 700; }
 
 .public-info summary {
   padding: 10px 14px;

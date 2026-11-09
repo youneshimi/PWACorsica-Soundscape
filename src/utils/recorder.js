@@ -7,13 +7,15 @@ export function microphoneError(error) {
   return error.message || 'Enregistrement impossible. Réessayez.';
 }
 
-export function createAudioRecorder({ onState, onAudio, onDuration, onError }) {
+export function createAudioRecorder({ onState, onAudio, onDuration, onError, onLevel }) {
   let state = 'idle';
   let disposed = false;
   let stream;
   let recorder;
   let timer;
   let previewUrl;
+  let audioContext;
+  let levelFrame;
 
   function setState(value) {
     state = value;
@@ -21,6 +23,11 @@ export function createAudioRecorder({ onState, onAudio, onDuration, onError }) {
   }
 
   function releaseMicrophone() {
+    if (levelFrame && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(levelFrame);
+    levelFrame = undefined;
+    audioContext?.close();
+    audioContext = undefined;
+    if (!disposed) onLevel?.(0);
     clearInterval(timer);
     timer = undefined;
     stream?.getTracks().forEach((track) => track.stop());
@@ -72,6 +79,22 @@ export function createAudioRecorder({ onState, onAudio, onDuration, onError }) {
         return;
       }
       stream = acquired;
+      if (onLevel && typeof AudioContext !== 'undefined') {
+        try {
+          audioContext = new AudioContext();
+          const analyser = audioContext.createAnalyser();
+          analyser.fftSize = 256;
+          audioContext.createMediaStreamSource(stream).connect(analyser);
+          const values = new Uint8Array(analyser.fftSize);
+          const sample = () => {
+            analyser.getByteTimeDomainData(values);
+            const level = Math.sqrt(values.reduce((sum, value) => sum + ((value - 128) / 128) ** 2, 0) / values.length);
+            if (!disposed) onLevel(Math.min(1, level * 5));
+            levelFrame = requestAnimationFrame(sample);
+          };
+          sample();
+        } catch { audioContext?.close(); audioContext = undefined; }
+      }
       const mimeType = AUDIO_TYPES.find((type) => MediaRecorder.isTypeSupported(type));
       const instance = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       recorder = instance;

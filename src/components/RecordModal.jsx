@@ -23,6 +23,7 @@ export default function RecordModal({ onClose, onSave }) {
   const [phase, setPhase] = useState('idle');
   const [audio, setAudio] = useState(null);
   const [duration, setDuration] = useState(0);
+  const [level, setLevel] = useState(0);
   const recorderRef = useRef(null);
   const session = useRef({ active: true, geoRequest: 0 });
   const savingRef = useRef(false);
@@ -47,7 +48,7 @@ export default function RecordModal({ onClose, onSave }) {
   useEffect(() => {
     session.current.active = true;
     const recorder = createAudioRecorder({
-      onState: setPhase, onAudio: setAudio, onDuration: setDuration, onError: setMicError,
+      onState: setPhase, onAudio: setAudio, onDuration: setDuration, onError: setMicError, onLevel: setLevel,
     });
     recorderRef.current = recorder;
     return () => {
@@ -179,6 +180,8 @@ export default function RecordModal({ onClose, onSave }) {
         <fieldset className="modal-body" disabled={saving}>
           {/* Zone d'enregistrement */}
           <div className="record-zone">
+            {!audio && <div className={`amplitude-orb ${recording ? 'active' : ''}`} style={{ '--level': level }} aria-hidden="true"><Mic size={30} /></div>}
+            <p className="record-timer" aria-live="off">{recording ? `Enregistrement · ${formatDuration(duration)}` : audio ? 'Votre aperçu est prêt' : 'Prêt à capturer un son'}</p>
             {!audio ? (
               <button
                 type="button"
@@ -238,16 +241,8 @@ export default function RecordModal({ onClose, onSave }) {
           </div>
 
           <div className="form-group">
-            <label htmlFor="category">Catégorie</label>
-            <select
-              id="category"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-            >
-              {categories.map((c) => (
-                <option key={c.value} value={c.value}>{c.label}</option>
-              ))}
-            </select>
+            <span className="position-label">Catégorie</span>
+            <div className="category-chips" role="group" aria-label="Catégorie">{categories.map((c) => <button key={c.value} type="button" className={`category-chip ${category === c.value ? 'active' : ''}`} aria-pressed={category === c.value} onClick={() => setCategory(c.value)}>{({ mer: '🌊', nature: '🌿', village: '🏘️', animal: '🐦', musique: '🎵', marche: '🥾', autre: '🔊' })[c.value]} {c.label}</button>)}</div>
           </div>
 
           {/* Position GPS */}

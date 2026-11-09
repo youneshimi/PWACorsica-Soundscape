@@ -6,7 +6,7 @@
 // ============================================================
 
 import { useState, useEffect, useCallback } from 'react';
-import { Mic } from 'lucide-react';
+import { Mic, Map, Compass, Route, UserRound, Moon, Sun } from 'lucide-react';
 import SoundMap from './components/SoundMap';
 import SoundPanel from './components/SoundPanel';
 import RecordModal from './components/RecordModal';
@@ -35,6 +35,19 @@ function App() {
     return () => window.removeEventListener('online', sync);
   }, [profile]);
   const [view, setView] = useState('map');
+  const [theme, setTheme] = useState(() => localStorage.getItem('soundscape-theme') || 'system');
+  const [notice, setNotice] = useState(null);
+  const notify = useCallback((message, type = 'success') => setNotice({ message, type, id: Date.now() }), []);
+  useEffect(() => {
+    if (theme === 'system') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.dataset.theme = theme;
+    localStorage.setItem('soundscape-theme', theme);
+  }, [theme]);
+  useEffect(() => {
+    if (!notice) return undefined;
+    const timer = setTimeout(() => setNotice(null), 4000);
+    return () => clearTimeout(timer);
+  }, [notice]);
   const [selectedTrail, setSelectedTrail] = useState(null);
   const [stats, setStats] = useState({});
   const displayedSounds = sounds.map((sound) => ({ ...sound, ...stats[sound.id] }));
@@ -82,6 +95,7 @@ function App() {
   const handleSelectSound = useCallback((sound) => {
     setSelectedSound(sound);
     setFlyTo([sound.latitude, sound.longitude]);
+    navigator.vibrate?.(10);
   }, []);
 
   // Sauvegarder un enregistrement
@@ -89,7 +103,8 @@ function App() {
     await addSound({ ...soundData, profileId: profile?.id, nickname: profile?.nickname });
     // Centrer la carte sur le nouveau son
     setFlyTo([soundData.latitude, soundData.longitude]);
-  }, [addSound, profile]);
+    notify('Son ajouté à la carte !');
+  }, [addSound, profile, notify]);
 
   // Vérifier si on arrive avec ?action=record (shortcut manifest)
   useEffect(() => {
@@ -105,6 +120,8 @@ function App() {
 
   return (
     <div className="app">
+      <header className="app-header"><span className="brand-mark" aria-hidden="true">◉</span><div className="brand-text"><strong>Corsica Soundscape</strong><small>La Corse, à écouter</small></div><span className="header-location">⌖ Corse, France</span><button className="theme-toggle" type="button" aria-label="Changer le thème" onClick={() => setTheme(theme === 'dark' || (theme === 'system' && matchMedia('(prefers-color-scheme: dark)').matches) ? 'light' : 'dark')}>{theme === 'dark' || (theme === 'system' && matchMedia('(prefers-color-scheme: dark)').matches) ? <Sun size={19} /> : <Moon size={19} />}</button></header>
+      <main className="workspace">
       {/* Carte principale */}
       <div className="map-container">
         {loading ? (
@@ -134,7 +151,14 @@ function App() {
         view={view}
         onViewChange={setView}
         onSelectTrail={setSelectedTrail}
+        loading={loading}
+        onRefresh={reload}
+        onNotify={notify}
+        theme={theme}
+        onThemeChange={setTheme}
       />
+      </main>
+      <nav className="bottom-nav" aria-label="Navigation principale">{[['map','Carte',Map],['popular','Populaires',Compass],['trails','Parcours',Route],['profile','Profil',UserRound]].map(([id,label,Icon]) => <button key={id} className={view === id || (view === 'detail' && id === 'map') ? 'active' : ''} aria-current={view === id ? 'page' : undefined} onClick={() => { setView(id); navigator.vibrate?.(8); }}><Icon size={21} /><span>{label}</span></button>)}</nav>
 
       {/* Bouton FAB enregistrement */}
       <button
@@ -163,6 +187,7 @@ function App() {
 
       {/* Bouton d'installation */}
       <InstallButton />
+      {notice && <div key={notice.id} className={`app-notice ${notice.type}`} role={notice.type === 'error' ? 'alert' : 'status'}>{notice.message}<button onClick={() => setNotice(null)} aria-label="Fermer">×</button></div>}
       {!profile && <div className="profile-backdrop"><form className="profile-dialog" onSubmit={async (event) => {
         event.preventDefault();
         try { setProfile(await createProfile(nickname)); setProfileError(''); }
