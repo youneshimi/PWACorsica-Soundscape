@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "push:keys": "node scripts/generate-vapid.js",
     "icons": "node scripts/generate-icons.js",
+    "og:image": "node scripts/generate-og-image.js",
     "preview:v2": "wrangler dev --local --env v2 --port 8798"
   },
   "dependencies": {

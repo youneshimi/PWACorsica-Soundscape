@@ -85,10 +85,10 @@ export function seoPlugin(options = {}) {
         tags: [
           { tag: 'link', attrs: { rel: 'canonical', href: siteUrl } },
           { tag: 'meta', attrs: { property: 'og:url', content: siteUrl } },
-          { tag: 'meta', attrs: { property: 'og:image', content: `${siteUrl}img/icon-512.png` } },
-          { tag: 'meta', attrs: { property: 'og:image:width', content: '512' } },
-          { tag: 'meta', attrs: { property: 'og:image:height', content: '512' } },
-          { tag: 'meta', attrs: { property: 'og:image:alt', content: 'Icône de Corsica Soundscape' } },
+          { tag: 'meta', attrs: { property: 'og:image', content: `${siteUrl}img/og-soundscape.png` } },
+          { tag: 'meta', attrs: { property: 'og:image:width', content: '1200' } },
+          { tag: 'meta', attrs: { property: 'og:image:height', content: '630' } },
+          { tag: 'meta', attrs: { property: 'og:image:alt', content: 'Corsica Soundscape — La Corse, à écouter' } },
         ],
       };
     },

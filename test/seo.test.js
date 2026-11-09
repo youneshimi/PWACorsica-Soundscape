@@ -35,7 +35,9 @@ test('le contenu public et les URL SEO restent cohérents dans le build servi sa
     assert.equal((html.match(/rel="canonical"/g) || []).length, 1);
     assert.match(html, /rel="canonical" href="https:\/\/soundscape.test\/"/);
     assert.match(html, /property="og:url" content="https:\/\/soundscape.test\/"/);
-    assert.match(html, /property="og:image" content="https:\/\/soundscape.test\/img\/icon-512.png"/);
+    assert.match(html, /property="og:image" content="https:\/\/soundscape.test\/img\/og-soundscape.png"/);
+    assert.match(html, /property="og:image:width" content="1200"/);
+    assert.match(html, /property="og:image:height" content="630"/);
     const structured = JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1]);
     assert.equal(structured.url, 'https://soundscape.test/');
     assert.equal(structured['@type'], 'WebApplication');
@@ -100,12 +102,12 @@ test('le contenu public et les URL SEO restent cohérents dans le build servi sa
     const llms = await fetch(`${base}/llms.txt`);
     assert.equal(llms.status, 200);
     assert.match(await llms.text(), /\]\(https:\/\/soundscape.test\/soundscape.md\)/);
-    const image = await fetch(`${base}/img/icon-512.png`);
+    const image = await fetch(`${base}/img/og-soundscape.png`);
     assert.equal(image.status, 200);
     assert.match(image.headers.get('Content-Type'), /image\/png/);
     const png = new DataView(await image.arrayBuffer());
-    assert.equal(png.getUint32(16), 512);
-    assert.equal(png.getUint32(20), 512);
+    assert.equal(png.getUint32(16), 1200);
+    assert.equal(png.getUint32(20), 630);
 
     dev = await createServer({ root, appType: 'mpa', configFile: false, logLevel: 'silent', plugins: [seoPlugin({ siteUrl: 'https://soundscape.test/' })], server: { host: '127.0.0.1', port: 0 } });
     await dev.listen();
