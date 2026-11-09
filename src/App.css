@@ -79,3 +79,4 @@
 .profile-dialog { width: min(100%, 340px); background: var(--color-bg); color: var(--color-text); padding: 1.5rem; border-radius: var(--radius); display: grid; gap: 1rem; box-shadow: var(--shadow); }
 .profile-dialog input { padding: .7rem; border: 1px solid var(--color-surface-hover); border-radius: var(--radius); }
 .profile-dialog button { background: var(--color-primary); color: white; padding: .7rem; border-radius: var(--radius); }
+.trail-map-number { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: #d47643; color: white; border: 2px solid white; box-shadow: 0 1px 5px #0008; font-weight: 700; }

@@ -59,6 +59,7 @@ function provider() {
       sounds.push(sound);
       return Response.json([sound], { status: 201 });
     }
+    if (url.pathname === '/rest/v1/sound_stats') return Response.json(sounds.map((sound) => ({ sound_id: sound.id, likes_count: 0, listens_count: 0 })));
     if (url.pathname.startsWith('/storage/v1/object/sounds/')) return Response.json({ Key: 'saved' });
     throw new Error(`Unexpected path: ${url.pathname}`);
   }

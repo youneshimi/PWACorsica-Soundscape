@@ -115,6 +115,7 @@ export async function completeSync(entry, serverSound) {
   const tx = db.transaction(['sounds', 'outbox'], 'readwrite');
   const writes = [tx.objectStore('sounds').put(storedSound({
     ...serverSound,
+    nickname: serverSound.nickname || entry.nickname || null,
     audioBlob: entry.audioBlob,
   }))];
   if (entry.localId && entry.localId !== serverSound.id) {

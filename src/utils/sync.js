@@ -1,10 +1,12 @@
 import { getOutbox, completeSync } from './db.js';
 import { getAudioFileName } from './audio.js';
+import { registerProfile } from './profile.js';
 
 let running;
 
 async function sendEntries() {
   const sent = [];
+  await registerProfile();
   while (true) {
     const entries = await getOutbox();
     if (!entries.length) return sent;

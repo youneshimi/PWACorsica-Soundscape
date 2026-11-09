@@ -77,7 +77,7 @@ test('le contenu public et les URL SEO restent cohérents dans le build servi sa
 
     const robots = await fetch(`${base}/robots.txt`);
     assert.equal(robots.status, 200);
-    const rules = await robots.text();
+    const rules = (await robots.text()).replace(/\r\n/g, '\n');
     assert.match(rules, /^Sitemap: https:\/\/soundscape.test\/sitemap.xml$/m);
     for (const agent of ['Googlebot', 'GPTBot', 'OAI-SearchBot', 'ClaudeBot', 'Claude-SearchBot', 'PerplexityBot', 'CCBot', 'Google-Extended']) {
       const group = rules.split(/\n\s*\n/).find((block) => block.includes(`User-agent: ${agent}\n`));

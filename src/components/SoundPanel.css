@@ -165,6 +165,14 @@
 .panel-nav button.active { background: var(--color-primary); color: white; }
 .popular-sort { margin-top: .7rem; font-size: .85rem; }
 .popular-sort select { padding: .35rem; border-radius: var(--radius); }
+.trails { display: grid; gap: .7rem; }
+.trails-heading { display: flex; align-items: center; justify-content: space-between; }
+.trails button, .trails form button { color: var(--color-text); background: var(--color-surface); border: 1px solid var(--color-surface-hover); border-radius: var(--radius); padding: .6rem; text-align: left; }
+.trails form { display: grid; gap: .6rem; }
+.trails input:not([type="checkbox"]), .trails textarea { width: 100%; padding: .6rem; border: 1px solid var(--color-surface-hover); border-radius: var(--radius); }
+.trail-choice { display: flex; gap: .5rem; align-items: center; }
+.trail-step { display: grid; gap: .3rem; width: 100%; }
+.trail-step span { font-size: .8rem; color: var(--color-text-muted); }
 
 .sound-card-header {
   display: flex;

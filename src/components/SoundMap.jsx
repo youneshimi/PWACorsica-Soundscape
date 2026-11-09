@@ -5,7 +5,7 @@
 // Chaque marqueur est cliquable et ouvre un popup avec titre + play.
 // ============================================================
 
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { useEffect } from 'react';
 import { Clock } from 'lucide-react';
@@ -67,7 +67,17 @@ function FlyToLocation({ position }) {
   return null;
 }
 
-export default function SoundMap({ sounds, selectedSound, onSelectSound, flyTo }) {
+function FitTrail({ trail }) {
+  const map = useMap();
+  useEffect(() => {
+    if (trail?.steps?.length) {
+      map.fitBounds(trail.steps.map((step) => [step.sound.latitude, step.sound.longitude]), { padding: [35, 35], maxZoom: 13 });
+    }
+  }, [trail, map]);
+  return null;
+}
+
+export default function SoundMap({ sounds, selectedSound, onSelectSound, flyTo, trail }) {
   return (
     <MapContainer
       center={CORSICA_CENTER}
@@ -81,6 +91,9 @@ export default function SoundMap({ sounds, selectedSound, onSelectSound, flyTo }
       />
 
       {flyTo && <FlyToLocation position={flyTo} />}
+      {trail && <FitTrail trail={trail} />}
+      {trail?.steps?.length > 1 && <Polyline positions={trail.steps.map((step) => [step.sound.latitude, step.sound.longitude])} pathOptions={{ color: '#d47643', weight: 4 }} />}
+      {trail?.steps?.map((step) => <Marker key={`trail-${step.position}`} position={[step.sound.latitude, step.sound.longitude]} icon={L.divIcon({ html: `<span class="trail-map-number">${Number(step.position)}</span>`, className: '', iconSize: [28, 28], iconAnchor: [14, 14] })} eventHandlers={{ click: () => onSelectSound(step.sound) }}><Popup>{step.position}. {step.sound.title}</Popup></Marker>)}
 
       {sounds.map((sound) => (
         <Marker

@@ -7,6 +7,7 @@ import { Clock, Headphones, Heart, Pause, Play, X } from 'lucide-react';
 import CategoryIcon from './CategoryIcon';
 import PushButton from './PushButton';
 import Comments from './Comments';
+import Trails from './Trails';
 import { getAudioSource } from '../utils/audio.js';
 import './SoundPanel.css';
 
@@ -21,7 +22,7 @@ const categories = [
   { value: 'autre', label: 'Autre' },
 ];
 
-export default function SoundPanel({ sounds, selectedSound, onSelectSound, outboxCount, profile, onStatsChange, view, onViewChange }) {
+export default function SoundPanel({ sounds, selectedSound, onSelectSound, outboxCount, profile, onStatsChange, view, onViewChange, onSelectTrail }) {
   const [filter, setFilter] = useState('all');
   const [isOpen, setIsOpen] = useState(false);
   const audioRef = useRef(null);
@@ -52,7 +53,9 @@ export default function SoundPanel({ sounds, selectedSound, onSelectSound, outbo
       const updated = { ...liked, [sound.id]: next };
       setLiked(updated);
       localStorage.setItem('corsica-soundscape-liked', JSON.stringify(updated));
-      onStatsChange(sound.id, { likesCount: Math.max(0, (sound.likesCount || 0) + (next ? 1 : -1)) });
+      const likesCount = Math.max(0, (sound.likesCount || 0) + (next ? 1 : -1));
+      onStatsChange(sound.id, { likesCount });
+      setPopular((previous) => previous.map((item) => item.id === sound.id ? { ...item, likesCount } : item));
     } catch (error) { setPlayError(error.message); }
   }
 
@@ -98,7 +101,11 @@ export default function SoundPanel({ sounds, selectedSound, onSelectSound, outbo
       await audio.play();
       if (profile && sound.synced) {
         fetch(`/api/sounds/${sound.id}/listen`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ profileId: profile.id }) })
-          .then((response) => { if (response.ok) onStatsChange(sound.id, { listensCount: (sound.listensCount || 0) + 1 }); })
+          .then((response) => { if (response.ok) {
+            const listensCount = (sound.listensCount || 0) + 1;
+            onStatsChange(sound.id, { listensCount });
+            setPopular((previous) => previous.map((item) => item.id === sound.id ? { ...item, listensCount } : item));
+          } })
           .catch(() => {});
       }
     } catch {
@@ -134,12 +141,12 @@ export default function SoundPanel({ sounds, selectedSound, onSelectSound, outbo
             )}
           </p>
           <PushButton />
-          <nav className="panel-nav" aria-label="Pages"><button className={view === 'map' ? 'active' : ''} onClick={() => onViewChange('map')}>Carte</button><button className={view === 'popular' ? 'active' : ''} onClick={() => onViewChange('popular')}>Populaires</button></nav>
+          <nav className="panel-nav" aria-label="Pages"><button className={view === 'map' ? 'active' : ''} onClick={() => onViewChange('map')}>Carte</button><button className={view === 'popular' ? 'active' : ''} onClick={() => onViewChange('popular')}>Populaires</button><button className={view === 'trails' ? 'active' : ''} onClick={() => onViewChange('trails')}>Parcours</button></nav>
           {view === 'popular' && <div className="popular-sort"><label htmlFor="popular-sort">Trier par </label><select id="popular-sort" value={popularSort} onChange={(event) => setPopularSort(event.target.value)}><option value="likes">Likes</option><option value="listens">Écoutes</option></select></div>}
         </div>
 
         {/* Filtre par catégorie */}
-        <div className="filter-bar">
+        {view !== 'trails' && <div className="filter-bar">
           {categories.map((cat) => (
             <button
               key={cat.value}
@@ -151,10 +158,11 @@ export default function SoundPanel({ sounds, selectedSound, onSelectSound, outbo
               {cat.label}
             </button>
           ))}
-        </div>
+        </div>}
 
         {/* Liste des sons */}
         <div className="sound-list">
+          {view === 'trails' ? <Trails sounds={sounds} profile={profile} onSelectSound={onSelectSound} onSelectTrail={onSelectTrail} /> : <>
           {playError && <p className="error-msg" role="alert">{playError}</p>}
           {filtered.length === 0 ? (
             <div className="empty-state">
@@ -198,6 +206,7 @@ export default function SoundPanel({ sounds, selectedSound, onSelectSound, outbo
             ))
           )}
           <Comments sound={selectedSound} profile={profile} />
+          </>}
         </div>
       </aside>
     </>

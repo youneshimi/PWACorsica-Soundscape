@@ -16,7 +16,7 @@ import InstallButton from './components/InstallButton';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { useSounds } from './hooks/useSounds';
 import { registerSW } from './utils/sw-register';
-import { createProfile, getProfile } from './utils/profile';
+import { createProfile, getProfile, registerProfile } from './utils/profile';
 import './App.css';
 
 function App() {
@@ -27,7 +27,15 @@ function App() {
   const [profile, setProfile] = useState(getProfile);
   const [nickname, setNickname] = useState('');
   const [profileError, setProfileError] = useState('');
+  useEffect(() => {
+    if (!profile) return;
+    const sync = () => registerProfile(profile).catch(() => {});
+    window.addEventListener('online', sync);
+    sync();
+    return () => window.removeEventListener('online', sync);
+  }, [profile]);
   const [view, setView] = useState('map');
+  const [selectedTrail, setSelectedTrail] = useState(null);
   const [stats, setStats] = useState({});
   const displayedSounds = sounds.map((sound) => ({ ...sound, ...stats[sound.id] }));
   const updateStats = useCallback((id, patch) => setStats((previous) => ({ ...previous, [id]: { ...previous[id], ...patch } })), []);
@@ -110,6 +118,7 @@ function App() {
             selectedSound={selectedSound}
             onSelectSound={handleSelectSound}
             flyTo={flyTo}
+            trail={selectedTrail}
           />
         )}
       </div>
@@ -124,6 +133,7 @@ function App() {
         onStatsChange={updateStats}
         view={view}
         onViewChange={setView}
+        onSelectTrail={setSelectedTrail}
       />
 
       {/* Bouton FAB enregistrement */}

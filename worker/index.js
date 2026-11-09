@@ -234,12 +234,12 @@ export async function handleRequest(request, env, fetcher = fetch, context) {
       const profile = await request.json().catch(() => null);
       if (!profile || !UUID.test(profile.id) || typeof profile.nickname !== 'string' || !profile.nickname.trim() || profile.nickname.trim().length > 30) throw new ApiError(400, 'Profil invalide.');
       const storage = createStorage(env, fetcher);
-      const result = await storage.call('/rest/v1/profiles', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
+      const result = await storage.call('/rest/v1/profiles?on_conflict=id', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'resolution=ignore-duplicates' },
         body: JSON.stringify({ id: profile.id, nickname: profile.nickname.trim() }),
       });
-      if (!result.ok) throw new ApiError(result.status === 409 ? 409 : 502, 'Création du profil impossible.');
-      return json((await result.json())[0], 201);
+      if (!result.ok) throw new ApiError(502, 'Création du profil impossible.');
+      return json({ id: profile.id, nickname: profile.nickname.trim() }, 201);
     }
     const interaction = url.pathname.match(/^\/api\/sounds\/([0-9a-f-]{36})\/(like|listen)$/i);
     if (interaction) {
@@ -294,6 +294,35 @@ export async function handleRequest(request, env, fetcher = fetch, context) {
       const rows = await storage.rows({ id: `in.(${ids.join(',')})` });
       const byId = new Map(rows.map((row) => [row.id, row]));
       return json(ranking.filter((row) => byId.has(row.sound_id)).map((row) => toSound({ ...byId.get(row.sound_id), ...row })));
+    }
+    if (url.pathname === '/api/trails') {
+      if (!['GET', 'POST'].includes(request.method)) return json({ error: 'Méthode non autorisée.' }, 405, { Allow: 'GET, POST' });
+      const storage = createStorage(env, fetcher);
+      if (request.method === 'GET') {
+        const response = await storage.call('/rest/v1/trails?select=id,title,description,profile_id,created_at,profile:profiles(nickname),trail_sounds(id)&order=created_at.desc&limit=100');
+        if (!response.ok) throw new ApiError(502, 'Parcours indisponibles.');
+        return json((await response.json()).map((row) => ({ id: row.id, title: row.title, description: row.description, profileId: row.profile_id, nickname: row.profile?.nickname || 'Anonyme', createdAt: row.created_at, soundsCount: row.trail_sounds?.length || 0 })));
+      }
+      const body = await request.json().catch(() => null);
+      if (!body || !UUID.test(body.profileId) || typeof body.title !== 'string' || !body.title.trim() || body.title.trim().length > 80 || typeof body.description !== 'string' || body.description.length > 500 || !Array.isArray(body.sounds) || body.sounds.length < 1 || body.sounds.length > 30 || body.sounds.some((item) => !UUID.test(item.soundId) || typeof item.note !== 'string' || item.note.length > 300) || new Set(body.sounds.map((item) => item.soundId)).size !== body.sounds.length) throw new ApiError(400, 'Parcours invalide.');
+      const response = await storage.call('/rest/v1/rpc/create_trail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ p_profile_id: body.profileId, p_title: body.title.trim(), p_description: body.description, p_sounds: body.sounds }) });
+      if (!response.ok) throw new ApiError(502, 'Création du parcours impossible.');
+      return json({ id: await response.json() }, 201);
+    }
+    const trailRoute = url.pathname.match(/^\/api\/trails\/([0-9a-f-]{36})$/i);
+    if (trailRoute) {
+      if (!UUID.test(trailRoute[1])) throw new ApiError(404, 'Parcours inconnu.');
+      if (request.method !== 'GET') return json({ error: 'Méthode non autorisée.' }, 405, { Allow: 'GET' });
+      const storage = createStorage(env, fetcher);
+      const query = new URLSearchParams({ select: 'id,title,description,profile_id,created_at,profile:profiles(nickname)', id: `eq.${trailRoute[1]}`, limit: '1' });
+      const response = await storage.call(`/rest/v1/trails?${query}`);
+      if (!response.ok) throw new ApiError(502, 'Parcours indisponible.');
+      const [row] = await response.json();
+      if (!row) throw new ApiError(404, 'Parcours inconnu.');
+      const stepsQuery = new URLSearchParams({ select: 'position,note,sound:sounds(id,client_id,title,description,latitude,longitude,category,audio_path,created_at,profile_id,profile:profiles(nickname))', trail_id: `eq.${row.id}`, order: 'position.asc' });
+      const stepsResponse = await storage.call(`/rest/v1/trail_sounds?${stepsQuery}`);
+      if (!stepsResponse.ok) throw new ApiError(502, 'Étapes du parcours indisponibles.');
+      return json({ id: row.id, title: row.title, description: row.description, profileId: row.profile_id, nickname: row.profile?.nickname || 'Anonyme', createdAt: row.created_at, steps: (await stepsResponse.json()).map((step) => ({ position: step.position, note: step.note, sound: toSound(step.sound) })) });
     }
     if (isApi && url.pathname !== '/api/sounds') throw new ApiError(404, 'Route API inconnue.');
     const storage = createStorage(env, fetcher);
